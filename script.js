@@ -48,7 +48,7 @@ function showMessage(message, type) {
 
 // Reveal cards and sections as they enter the viewport
 const animatedElements = document.querySelectorAll(
-    '.module-card, .card, .timeline-item, .priority-item, .detail-table, .dashboard-card, .idea-result-card, .product-card'
+    '.module-card, .card, .timeline-item, .priority-item, .detail-table, .dashboard-card, .idea-result-card, .product-card, .publishing-queue-card'
 );
 
 const observer = new IntersectionObserver((entries) => {
@@ -210,6 +210,22 @@ const sortProductsSelect = document.getElementById('sortProductsSelect');
 const exportJsonBtn = document.getElementById('exportJsonBtn');
 const exportCsvBtn = document.getElementById('exportCsvBtn');
 
+// Publishing Queue localStorage key and UI references.
+const publishingQueueStorageKey = 'sunesonCommerceOsPublishingQueue';
+const publishingQueueGrid = document.getElementById('publishingQueueGrid');
+const publishingQueueSummary = document.getElementById('publishingQueueSummary');
+const clearPublishingQueueBtn = document.getElementById('clearPublishingQueueBtn');
+const exportPublishingQueueCsvBtn = document.getElementById('exportPublishingQueueCsvBtn');
+
+// Controlled status options for every queue checklist field.
+const publishingChecklistOptions = {
+    seoStatus: ['Not Started', 'Drafted', 'Approved'],
+    mockupStatus: ['Not Started', 'Created', 'Approved'],
+    descriptionStatus: ['Not Started', 'Drafted', 'Approved'],
+    socialPostStatus: ['Not Started', 'Drafted', 'Scheduled'],
+    publishStatus: ['Not Ready', 'Ready', 'Published']
+};
+
 // Track edit mode state so one form can handle create and update workflows.
 let editingProductId = null;
 
@@ -226,6 +242,21 @@ function loadProductLibrary() {
 // Persist the entire product list in localStorage as the single source of truth.
 function saveProductLibrary(products) {
     localStorage.setItem(productLibraryStorageKey, JSON.stringify(products));
+}
+
+// Load Publishing Queue records while safely handling malformed localStorage data.
+function loadPublishingQueue() {
+    try {
+        const raw = localStorage.getItem(publishingQueueStorageKey);
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+// Persist queue records to localStorage.
+function savePublishingQueue(queueItems) {
+    localStorage.setItem(publishingQueueStorageKey, JSON.stringify(queueItems));
 }
 
 // Generate a sequential product ID based on the highest existing product number.
@@ -287,6 +318,266 @@ function formatMargin(marginValue) {
     }
 
     return `${marginValue.toFixed(1)}%`;
+}
+
+// Determine if a queue item is fully launch-ready based on required checklist statuses.
+function isQueueItemReadyToPublish(queueItem) {
+    const checklistApproved = queueItem.seoStatus === 'Approved'
+        && queueItem.mockupStatus === 'Approved'
+        && queueItem.descriptionStatus === 'Approved'
+        && queueItem.socialPostStatus === 'Scheduled';
+
+    return checklistApproved && (queueItem.publishStatus === 'Ready' || queueItem.publishStatus === 'Published');
+}
+
+// Build an initial Publishing Queue payload by copying fields from Product Library.
+function createPublishingQueueItem(product) {
+    return {
+        queueId: `QUEUE-${product.id}`,
+        productId: product.id,
+        title: product.title,
+        collection: product.collection,
+        productType: product.productType,
+        estimatedPrice: product.estimatedPrice,
+        estimatedCost: product.estimatedCost,
+        estimatedMargin: product.estimatedMargin,
+        launchChannel: product.launchChannel || 'Shopify',
+        seoStatus: 'Not Started',
+        mockupStatus: 'Not Started',
+        descriptionStatus: 'Not Started',
+        socialPostStatus: 'Not Started',
+        publishStatus: 'Not Ready',
+        createdAt: new Date().toISOString()
+    };
+}
+
+// Add a Product Library record into Publishing Queue if it is not already queued.
+function addToPublishingQueue(product) {
+    const queueItems = loadPublishingQueue();
+    const existingIndex = queueItems.findIndex((item) => item.productId === product.id);
+
+    if (existingIndex >= 0) {
+        // Keep checklist progress but refresh copied product metadata.
+        const existingItem = queueItems[existingIndex];
+        queueItems[existingIndex] = {
+            ...existingItem,
+            title: product.title,
+            collection: product.collection,
+            productType: product.productType,
+            estimatedPrice: product.estimatedPrice,
+            estimatedCost: product.estimatedCost,
+            estimatedMargin: product.estimatedMargin,
+            launchChannel: product.launchChannel || existingItem.launchChannel
+        };
+        savePublishingQueue(queueItems);
+        refreshPublishingQueue();
+        showMessage(`${product.id} already in Publishing Queue. Details refreshed.`, 'success');
+        return;
+    }
+
+    const queueItem = createPublishingQueueItem(product);
+    savePublishingQueue([queueItem, ...queueItems]);
+    refreshPublishingQueue();
+    showMessage(`${product.id} moved to Publishing Queue.`, 'success');
+}
+
+// Update a single queue item's checklist status value.
+function updatePublishingQueueStatus(queueId, fieldName, value) {
+    const queueItems = loadPublishingQueue();
+    const updatedItems = queueItems.map((item) => {
+        if (item.queueId !== queueId) {
+            return item;
+        }
+
+        return {
+            ...item,
+            [fieldName]: value
+        };
+    });
+
+    savePublishingQueue(updatedItems);
+    refreshPublishingQueue();
+}
+
+// Mark queue item as Published and sync the linked Product Library record status.
+function markQueueItemPublished(queueId) {
+    const queueItems = loadPublishingQueue();
+    const targetItem = queueItems.find((item) => item.queueId === queueId);
+
+    if (!targetItem) {
+        showMessage('Queue item not found.', 'error');
+        return;
+    }
+
+    const updatedQueue = queueItems.map((item) => {
+        if (item.queueId !== queueId) {
+            return item;
+        }
+
+        return {
+            ...item,
+            publishStatus: 'Published'
+        };
+    });
+
+    const products = loadProductLibrary();
+    const updatedProducts = products.map((product) => {
+        if (product.id !== targetItem.productId) {
+            return product;
+        }
+
+        return {
+            ...product,
+            status: 'Published'
+        };
+    });
+
+    savePublishingQueue(updatedQueue);
+    saveProductLibrary(updatedProducts);
+    refreshPublishingQueue();
+    refreshProductLibrary();
+    showMessage(`${targetItem.productId} marked as Published.`, 'success');
+}
+
+// Convert queue records to CSV for download.
+function publishingQueueToCsv(queueItems) {
+    const headers = [
+        'Product ID',
+        'Product Title',
+        'Collection',
+        'Product Type',
+        'Estimated Price',
+        'Estimated Cost',
+        'Estimated Margin %',
+        'Launch Channel',
+        'SEO Status',
+        'Mockup Status',
+        'Description Status',
+        'Social Post Status',
+        'Publish Status',
+        'Ready to Publish'
+    ];
+
+    const escapeCsv = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+
+    const rows = queueItems.map((item) => [
+        item.productId,
+        item.title,
+        item.collection,
+        item.productType,
+        item.estimatedPrice ?? '',
+        item.estimatedCost ?? '',
+        item.estimatedMargin ?? '',
+        item.launchChannel,
+        item.seoStatus,
+        item.mockupStatus,
+        item.descriptionStatus,
+        item.socialPostStatus,
+        item.publishStatus,
+        isQueueItemReadyToPublish(item) ? 'Yes' : 'No'
+    ]);
+
+    return [headers, ...rows]
+        .map((row) => row.map(escapeCsv).join(','))
+        .join('\n');
+}
+
+// Render a select control for a queue checklist field.
+function renderQueueStatusSelect(queueId, fieldName, value) {
+    const options = publishingChecklistOptions[fieldName] || [];
+    const fieldLabels = {
+        seoStatus: 'SEO Status',
+        mockupStatus: 'Mockup Status',
+        descriptionStatus: 'Description Status',
+        socialPostStatus: 'Social Post Status',
+        publishStatus: 'Publish Status'
+    };
+    const label = fieldLabels[fieldName] || fieldName;
+
+    return `
+        <label class="queue-select-wrap" for="${escapeHtml(`${queueId}-${fieldName}`)}">
+            <span>${escapeHtml(label)}</span>
+            <select
+                id="${escapeHtml(`${queueId}-${fieldName}`)}"
+                class="queue-status-select"
+                data-queue-id="${escapeHtml(queueId)}"
+                data-status-field="${escapeHtml(fieldName)}"
+            >
+                ${options.map((option) => `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+            </select>
+        </label>
+    `;
+}
+
+// Render the Publishing Queue section from localStorage data.
+function refreshPublishingQueue() {
+    if (!publishingQueueGrid) {
+        return;
+    }
+
+    const queueItems = loadPublishingQueue();
+    const sortedQueueItems = [...queueItems].sort((a, b) => {
+        const aReady = isQueueItemReadyToPublish(a) ? 1 : 0;
+        const bReady = isQueueItemReadyToPublish(b) ? 1 : 0;
+        if (aReady !== bReady) {
+            return bReady - aReady;
+        }
+
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    const readyCount = queueItems.filter((item) => isQueueItemReadyToPublish(item)).length;
+
+    if (publishingQueueSummary) {
+        publishingQueueSummary.textContent = `${queueItems.length} items in queue • ${readyCount} ready to publish`;
+    }
+
+    if (!sortedQueueItems.length) {
+        publishingQueueGrid.innerHTML = '<article class="product-empty-state">No products in Publishing Queue yet. Use "Move to Publishing Queue" from Product Library cards to start launch prep.</article>';
+        return;
+    }
+
+    publishingQueueGrid.innerHTML = sortedQueueItems.map((item) => {
+        const readyBadge = isQueueItemReadyToPublish(item)
+            ? '<span class="pill status-good">Ready to Publish</span>'
+            : '<span class="pill status-warning">Launch Prep In Progress</span>';
+
+        return `
+            <article class="publishing-queue-card" data-queue-id="${escapeHtml(item.queueId)}">
+                <div class="product-card-top">
+                    <div>
+                        <p class="product-id">${escapeHtml(item.productId)}</p>
+                        <h3 class="product-title">${escapeHtml(item.title)}</h3>
+                    </div>
+                    ${readyBadge}
+                </div>
+
+                <div class="product-meta">
+                    <p class="product-meta-item"><span class="product-meta-label">Collection</span><span class="product-meta-value">${escapeHtml(item.collection || 'N/A')}</span></p>
+                    <p class="product-meta-item"><span class="product-meta-label">Product Type</span><span class="product-meta-value">${escapeHtml(item.productType || 'N/A')}</span></p>
+                    <p class="product-meta-item"><span class="product-meta-label">Estimated Price</span><span class="product-meta-value">${escapeHtml(formatCurrency(item.estimatedPrice))}</span></p>
+                    <p class="product-meta-item"><span class="product-meta-label">Estimated Cost</span><span class="product-meta-value">${escapeHtml(formatCurrency(item.estimatedCost))}</span></p>
+                    <p class="product-meta-item"><span class="product-meta-label">Estimated Margin</span><span class="product-meta-value">${escapeHtml(formatMargin(item.estimatedMargin))}</span></p>
+                    <p class="product-meta-item"><span class="product-meta-label">Launch Channel</span><span class="product-meta-value">${escapeHtml(item.launchChannel || 'N/A')}</span></p>
+                </div>
+
+                <div class="publishing-checklist-grid">
+                    ${renderQueueStatusSelect(item.queueId, 'seoStatus', item.seoStatus)}
+                    ${renderQueueStatusSelect(item.queueId, 'mockupStatus', item.mockupStatus)}
+                    ${renderQueueStatusSelect(item.queueId, 'descriptionStatus', item.descriptionStatus)}
+                    ${renderQueueStatusSelect(item.queueId, 'socialPostStatus', item.socialPostStatus)}
+                    ${renderQueueStatusSelect(item.queueId, 'publishStatus', item.publishStatus)}
+                </div>
+
+                <div class="publishing-queue-card-actions">
+                    <button class="btn btn-primary mark-queue-published-btn" type="button" data-queue-id="${escapeHtml(item.queueId)}">Mark as Published</button>
+                    <button class="btn btn-secondary delete-queue-item-btn" type="button" data-queue-id="${escapeHtml(item.queueId)}">Delete from Queue</button>
+                </div>
+            </article>
+        `;
+    }).join('');
+
+    publishingQueueGrid.querySelectorAll('.publishing-queue-card').forEach((card) => observeAnimatedElement(card));
 }
 
 // Convert a mock idea score (e.g., 8.6 / 10) to an approximate margin percentage.
@@ -500,6 +791,7 @@ function renderProductGrid(products) {
             <div class="product-card-actions">
                 <button class="btn btn-secondary edit-product-btn" type="button" data-product-id="${escapeHtml(product.id)}">Edit</button>
                 <button class="btn btn-secondary delete-product-btn" type="button" data-product-id="${escapeHtml(product.id)}">Delete</button>
+                <button class="btn btn-secondary move-to-publishing-queue-btn" type="button" data-product-id="${escapeHtml(product.id)}">Move to Publishing Queue</button>
                 <button class="btn btn-primary publish-product-btn" type="button" data-product-id="${escapeHtml(product.id)}">Mark as Published</button>
             </div>
         </article>
@@ -724,6 +1016,11 @@ if (productGrid) {
             return;
         }
 
+        if (actionButton.classList.contains('move-to-publishing-queue-btn')) {
+            addToPublishingQueue(targetProduct);
+            return;
+        }
+
         if (actionButton.classList.contains('publish-product-btn')) {
             const updatedProducts = products.map((product) => {
                 if (product.id !== productId) {
@@ -837,5 +1134,68 @@ function initializeChecklist() {
 }
 
 initializeChecklist();
+
+// Delegate Publishing Queue checklist and action events.
+if (publishingQueueGrid) {
+    publishingQueueGrid.addEventListener('change', (event) => {
+        const select = event.target.closest('.queue-status-select');
+        if (!select) {
+            return;
+        }
+
+        const queueId = select.dataset.queueId;
+        const fieldName = select.dataset.statusField;
+        const nextValue = select.value;
+
+        if (!queueId || !fieldName) {
+            return;
+        }
+
+        updatePublishingQueueStatus(queueId, fieldName, nextValue);
+    });
+
+    publishingQueueGrid.addEventListener('click', (event) => {
+        const deleteButton = event.target.closest('.delete-queue-item-btn');
+        if (deleteButton) {
+            const queueId = deleteButton.dataset.queueId;
+            const remainingItems = loadPublishingQueue().filter((item) => item.queueId !== queueId);
+            savePublishingQueue(remainingItems);
+            refreshPublishingQueue();
+            showMessage('Queue item removed.', 'success');
+            return;
+        }
+
+        const publishButton = event.target.closest('.mark-queue-published-btn');
+        if (publishButton) {
+            const queueId = publishButton.dataset.queueId;
+            if (!queueId) {
+                return;
+            }
+
+            markQueueItemPublished(queueId);
+        }
+    });
+}
+
+// Clear all queue records.
+if (clearPublishingQueueBtn) {
+    clearPublishingQueueBtn.addEventListener('click', () => {
+        savePublishingQueue([]);
+        refreshPublishingQueue();
+        showMessage('Publishing Queue cleared.', 'success');
+    });
+}
+
+// Export queue records as CSV.
+if (exportPublishingQueueCsvBtn) {
+    exportPublishingQueueCsvBtn.addEventListener('click', () => {
+        const queueItems = loadPublishingQueue();
+        downloadTextFile('suneson-publishing-queue.csv', publishingQueueToCsv(queueItems), 'text/csv;charset=utf-8');
+        showMessage('Publishing Queue exported as CSV.', 'success');
+    });
+}
+
+// Initialize Publishing Queue from localStorage on page load.
+refreshPublishingQueue();
 
 console.log('Suneson Commerce OS internal dashboard initialized.');

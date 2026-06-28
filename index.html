@@ -14,6 +14,7 @@
                 <li><a href="#idea-pipeline">Ideas</a></li>
                 <li><a href="#design-queue">Design</a></li>
                 <li><a href="#product-library">Library</a></li>
+                <li><a href="#publishing-queue">Publishing Queue</a></li>
                 <li><a href="#launches">Launches</a></li>
                 <li><a href="#launch-checklist">Checklist</a></li>
                 <li><a href="#analytics">Profit</a></li>
@@ -390,6 +391,27 @@
                 </div>
 
                 <div class="product-grid" id="productGrid" aria-live="polite"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="publishing-queue" id="publishing-queue">
+        <div class="container">
+            <div class="publishing-queue-head">
+                <h2>Publishing Queue</h2>
+                <p class="section-subtitle">Track products that are preparing for channel launch and complete launch checklist statuses before publishing.</p>
+            </div>
+
+            <div class="publishing-queue-shell card">
+                <div class="publishing-queue-toolbar">
+                    <p class="publishing-queue-summary" id="publishingQueueSummary">0 items in queue • 0 ready to publish</p>
+                    <div class="publishing-queue-actions">
+                        <button class="btn btn-secondary" id="exportPublishingQueueCsvBtn" type="button">Export Publishing Queue as CSV</button>
+                        <button class="btn btn-secondary" id="clearPublishingQueueBtn" type="button">Clear Publishing Queue</button>
+                    </div>
+                </div>
+
+                <div class="publishing-queue-grid" id="publishingQueueGrid" aria-live="polite"></div>
             </div>
         </div>
     </section>
