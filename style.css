@@ -144,7 +144,7 @@ h1 {
 }
 
 h2 {
-  max-width: 12ch;
+  max-width: 16ch;
   margin-bottom: 0;
   font-size: clamp(2rem, 4vw, 3rem);
 }
@@ -402,7 +402,7 @@ h2 {
 }
 
 .section--split .section-heading h2 {
-  max-width: 14ch;
+  max-width: 18ch;
 }
 
 .split-card {
