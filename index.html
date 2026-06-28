@@ -14,7 +14,9 @@
                 <li><a href="#idea-pipeline">Ideas</a></li>
                 <li><a href="#design-queue">Design</a></li>
                 <li><a href="#product-library">Library</a></li>
+                <li><a href="#design-approval-queue">Design Approval</a></li>
                 <li><a href="#publishing-queue">Publishing Queue</a></li>
+                <li><a href="#marketing-generator">Marketing</a></li>
                 <li><a href="#launches">Launches</a></li>
                 <li><a href="#launch-checklist">Checklist</a></li>
                 <li><a href="#analytics">Profit</a></li>
@@ -395,6 +397,54 @@
         </div>
     </section>
 
+    <section class="design-approval-queue" id="design-approval-queue">
+        <div class="container">
+            <div class="design-approval-head">
+                <h2>Design Approval Queue</h2>
+                <p class="section-subtitle">Move product artwork from initial concept to approved design with prompt tracking, revision notes, and one-click status actions.</p>
+            </div>
+
+            <div class="design-approval-shell card">
+                <div class="design-approval-filters">
+                    <label class="generator-field" for="designQueueStatusFilter">
+                        <span>Design Status</span>
+                        <select id="designQueueStatusFilter">
+                            <option value="all">All Queue Statuses</option>
+                            <option value="Not Started">Not Started</option>
+                            <option value="Prompt Written">Prompt Written</option>
+                            <option value="AI Generated">AI Generated</option>
+                            <option value="Needs Revision">Needs Revision</option>
+                        </select>
+                    </label>
+                    <label class="generator-field" for="designQueueCollectionFilter">
+                        <span>Collection</span>
+                        <select id="designQueueCollectionFilter">
+                            <option value="all">All Collections</option>
+                            <option value="Golf">Golf</option>
+                            <option value="Poker">Poker</option>
+                            <option value="Midwest Humor">Midwest Humor</option>
+                            <option value="BBQ">BBQ</option>
+                            <option value="Outdoors">Outdoors</option>
+                            <option value="Seasonal">Seasonal</option>
+                            <option value="Original Characters">Original Characters</option>
+                        </select>
+                    </label>
+                    <label class="generator-field" for="designQueuePriorityFilter">
+                        <span>Priority</span>
+                        <select id="designQueuePriorityFilter">
+                            <option value="all">All Priorities</option>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="design-approval-grid" id="designApprovalGrid" aria-live="polite"></div>
+            </div>
+        </div>
+    </section>
+
     <section class="publishing-queue" id="publishing-queue">
         <div class="container">
             <div class="publishing-queue-head">
@@ -415,6 +465,76 @@
             </div>
         </div>
     </section>
+
+    <section class="marketing-generator" id="marketing-generator">
+        <div class="container">
+            <div class="marketing-generator-head">
+                <h2>Marketing Content Generator</h2>
+                <p class="section-subtitle">Generate mock launch-ready channel content from products in your Publishing Queue and save reusable campaign packages.</p>
+            </div>
+
+            <div class="marketing-generator-shell card">
+                <div class="marketing-generator-inputs">
+                    <label class="generator-field" for="marketingQueueProductSelect">
+                        <span>Publishing Queue Product</span>
+                        <select id="marketingQueueProductSelect">
+                            <option value="">Select product from Publishing Queue</option>
+                        </select>
+                    </label>
+
+                    <label class="generator-field" for="marketingToneInput">
+                        <span>Marketing Tone</span>
+                        <input id="marketingToneInput" type="text" placeholder="Example: Bold and playful">
+                    </label>
+
+                    <label class="generator-field" for="marketingPlatformInput">
+                        <span>Target Platform</span>
+                        <input id="marketingPlatformInput" type="text" placeholder="Example: Instagram + TikTok">
+                    </label>
+
+                    <label class="generator-field" for="marketingGoalInput">
+                        <span>Campaign Goal</span>
+                        <input id="marketingGoalInput" type="text" placeholder="Example: Launch-day conversions">
+                    </label>
+
+                    <label class="generator-field" for="marketingAudienceInput">
+                        <span>Audience</span>
+                        <input id="marketingAudienceInput" type="text" placeholder="Example: 24-38 weekend golfers">
+                    </label>
+
+                    <label class="generator-field" for="marketingPromoAngleInput">
+                        <span>Promo Angle</span>
+                        <input id="marketingPromoAngleInput" type="text" placeholder="Example: Limited 72-hour launch offer">
+                    </label>
+                </div>
+
+                <div class="marketing-generator-actions">
+                    <button class="btn btn-primary" id="generateMarketingPackageBtn" type="button">Generate Marketing Package</button>
+                    <button class="btn btn-secondary" id="saveMarketingPackageBtn" type="button" disabled>Save Marketing Package</button>
+                </div>
+
+                <div class="marketing-preview" id="marketingPreview" aria-live="polite"></div>
+            </div>
+
+            <div class="marketing-packages-shell card">
+                <div class="marketing-packages-toolbar">
+                    <p class="marketing-packages-summary" id="marketingPackagesSummary">0 saved marketing packages</p>
+                    <button class="btn btn-secondary" id="exportMarketingPackagesCsvBtn" type="button">Export Marketing Packages as CSV</button>
+                </div>
+                <div class="marketing-packages-grid" id="marketingPackagesGrid" aria-live="polite"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="marketing-modal-overlay" id="marketingPackageModal" hidden aria-hidden="true">
+        <div class="marketing-modal-panel" role="dialog" aria-modal="true" aria-labelledby="marketingPackageModalTitle">
+            <div class="marketing-modal-head">
+                <h3 id="marketingPackageModalTitle">Marketing Package Details</h3>
+                <button class="btn btn-secondary marketing-modal-close" id="closeMarketingPackageModalBtn" type="button">Close</button>
+            </div>
+            <div class="marketing-modal-body" id="marketingPackageModalContent"></div>
+        </div>
+    </div>
 
     <section class="overview">
         <div class="container">

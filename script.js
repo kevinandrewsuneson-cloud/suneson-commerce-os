@@ -48,7 +48,7 @@ function showMessage(message, type) {
 
 // Reveal cards and sections as they enter the viewport
 const animatedElements = document.querySelectorAll(
-    '.module-card, .card, .timeline-item, .priority-item, .detail-table, .dashboard-card, .idea-result-card, .product-card, .publishing-queue-card'
+    '.module-card, .card, .timeline-item, .priority-item, .detail-table, .dashboard-card, .idea-result-card, .product-card, .publishing-queue-card, .marketing-package-card, .marketing-preview-card, .design-approval-card'
 );
 
 const observer = new IntersectionObserver((entries) => {
@@ -210,12 +210,37 @@ const sortProductsSelect = document.getElementById('sortProductsSelect');
 const exportJsonBtn = document.getElementById('exportJsonBtn');
 const exportCsvBtn = document.getElementById('exportCsvBtn');
 
+// Design Approval Queue UI references.
+const designQueueStatusFilter = document.getElementById('designQueueStatusFilter');
+const designQueueCollectionFilter = document.getElementById('designQueueCollectionFilter');
+const designQueuePriorityFilter = document.getElementById('designQueuePriorityFilter');
+const designApprovalGrid = document.getElementById('designApprovalGrid');
+
 // Publishing Queue localStorage key and UI references.
 const publishingQueueStorageKey = 'sunesonCommerceOsPublishingQueue';
 const publishingQueueGrid = document.getElementById('publishingQueueGrid');
 const publishingQueueSummary = document.getElementById('publishingQueueSummary');
 const clearPublishingQueueBtn = document.getElementById('clearPublishingQueueBtn');
 const exportPublishingQueueCsvBtn = document.getElementById('exportPublishingQueueCsvBtn');
+
+// Marketing Content Generator localStorage key and UI references.
+const marketingPackagesStorageKey = 'sunesonCommerceOsMarketingPackages';
+const marketingQueueProductSelect = document.getElementById('marketingQueueProductSelect');
+const marketingToneInput = document.getElementById('marketingToneInput');
+const marketingPlatformInput = document.getElementById('marketingPlatformInput');
+const marketingGoalInput = document.getElementById('marketingGoalInput');
+const marketingAudienceInput = document.getElementById('marketingAudienceInput');
+const marketingPromoAngleInput = document.getElementById('marketingPromoAngleInput');
+const generateMarketingPackageBtn = document.getElementById('generateMarketingPackageBtn');
+const saveMarketingPackageBtn = document.getElementById('saveMarketingPackageBtn');
+const marketingPreview = document.getElementById('marketingPreview');
+const marketingPackagesGrid = document.getElementById('marketingPackagesGrid');
+const marketingPackagesSummary = document.getElementById('marketingPackagesSummary');
+const exportMarketingPackagesCsvBtn = document.getElementById('exportMarketingPackagesCsvBtn');
+const marketingPackageModal = document.getElementById('marketingPackageModal');
+const marketingPackageModalContent = document.getElementById('marketingPackageModalContent');
+const closeMarketingPackageModalBtn = document.getElementById('closeMarketingPackageModalBtn');
+const marketingPackageModalPanel = marketingPackageModal?.querySelector('.marketing-modal-panel') || null;
 
 // Controlled status options for every queue checklist field.
 const publishingChecklistOptions = {
@@ -225,6 +250,12 @@ const publishingChecklistOptions = {
     socialPostStatus: ['Not Started', 'Drafted', 'Scheduled'],
     publishStatus: ['Not Ready', 'Ready', 'Published']
 };
+
+// Temporary in-memory package that is generated before a user saves it.
+let pendingMarketingPackage = null;
+
+// Product design statuses that belong in the Design Approval Queue workflow.
+const designApprovalQueueStatuses = ['Not Started', 'Prompt Written', 'AI Generated', 'Needs Revision'];
 
 // Track edit mode state so one form can handle create and update workflows.
 let editingProductId = null;
@@ -257,6 +288,21 @@ function loadPublishingQueue() {
 // Persist queue records to localStorage.
 function savePublishingQueue(queueItems) {
     localStorage.setItem(publishingQueueStorageKey, JSON.stringify(queueItems));
+}
+
+// Load persisted marketing packages from localStorage.
+function loadMarketingPackages() {
+    try {
+        const raw = localStorage.getItem(marketingPackagesStorageKey);
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+// Persist all marketing packages to localStorage.
+function saveMarketingPackages(packages) {
+    localStorage.setItem(marketingPackagesStorageKey, JSON.stringify(packages));
 }
 
 // Generate a sequential product ID based on the highest existing product number.
@@ -534,6 +580,7 @@ function refreshPublishingQueue() {
 
     if (!sortedQueueItems.length) {
         publishingQueueGrid.innerHTML = '<article class="product-empty-state">No products in Publishing Queue yet. Use "Move to Publishing Queue" from Product Library cards to start launch prep.</article>';
+        refreshMarketingProductOptions();
         return;
     }
 
@@ -578,6 +625,313 @@ function refreshPublishingQueue() {
     }).join('');
 
     publishingQueueGrid.querySelectorAll('.publishing-queue-card').forEach((card) => observeAnimatedElement(card));
+    refreshMarketingProductOptions();
+}
+
+// Populate the Marketing Content product selector from Publishing Queue items.
+function refreshMarketingProductOptions() {
+    if (!marketingQueueProductSelect) {
+        return;
+    }
+
+    const queueItems = loadPublishingQueue();
+    const previousValue = marketingQueueProductSelect.value;
+
+    marketingQueueProductSelect.innerHTML = `
+        <option value="">Select product from Publishing Queue</option>
+        ${queueItems.map((item) => `<option value="${escapeHtml(item.productId)}">${escapeHtml(item.productId)} - ${escapeHtml(item.title)}</option>`).join('')}
+    `;
+
+    const stillExists = queueItems.some((item) => item.productId === previousValue);
+    if (stillExists) {
+        marketingQueueProductSelect.value = previousValue;
+    }
+}
+
+// Generate deterministic mock marketing copy using user inputs and selected queue item.
+function buildMockMarketingPackage(queueItem, inputs) {
+    const tone = inputs.marketingTone || 'Confident and fun';
+    const platform = inputs.targetPlatform || queueItem.launchChannel || 'Shopify';
+    const campaignGoal = inputs.campaignGoal || 'Drive launch-day conversions';
+    const audience = inputs.audience || 'Fans of casual statement apparel';
+    const promoAngle = inputs.promoAngle || 'Limited first-week launch offer';
+    const title = queueItem.title;
+    const collection = queueItem.collection || 'Core Collection';
+    const productType = queueItem.productType || 'Apparel';
+
+    return {
+        packageId: `MKT-${queueItem.productId}-${Date.now()}`,
+        productId: queueItem.productId,
+        productTitle: title,
+        collection,
+        marketingTone: tone,
+        targetPlatform: platform,
+        campaignGoal,
+        audience,
+        promoAngle,
+        instagramCaption: `${title} is here. ${promoAngle}. Built for ${audience.toLowerCase()} with a ${tone.toLowerCase()} voice. Tap to shop the launch now.`,
+        facebookPost: `New drop alert: ${title} from the ${collection} collection. ${campaignGoal}. ${promoAngle}. This ${productType.toLowerCase()} is live now.`,
+        tiktokCaption: `${title} just dropped. ${promoAngle}. ${campaignGoal}.`,
+        pinterestDescription: `${title} is a ${tone.toLowerCase()} ${productType.toLowerCase()} concept from our ${collection} collection. ${promoAngle}. Great for ${audience.toLowerCase()}.`,
+        emailSubjectLine: `${title} just launched: ${promoAngle}`,
+        shortEmailBody: `The ${title} launch is live. ${campaignGoal}. This release is designed for ${audience.toLowerCase()} and follows our ${tone.toLowerCase()} campaign direction. Shop now before this promo window closes.`,
+        productSeoTitle: `${title} | ${collection} ${productType} | Suneson Commerce`,
+        productMetaDescription: `Shop ${title} from the ${collection} collection. ${promoAngle}. Designed for ${audience.toLowerCase()} and ready to wear now.`,
+        suggestedHashtags: '#SunesonCommerce #NewDrop #ShopNow #GraphicApparel #LimitedLaunch',
+        createdAt: new Date().toISOString(),
+        createdDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    };
+}
+
+// Render one generated package preview before it is saved.
+function renderMarketingPreview(marketingPackage) {
+    if (!marketingPreview) {
+        return;
+    }
+
+    if (!marketingPackage) {
+        marketingPreview.innerHTML = '<article class="product-empty-state">Generate a marketing package to preview launch copy for social, email, and SEO fields.</article>';
+        return;
+    }
+
+    marketingPreview.innerHTML = `
+        <article class="marketing-preview-card">
+            <div class="product-card-top">
+                <div>
+                    <p class="product-id">${escapeHtml(marketingPackage.productId)}</p>
+                    <h3 class="product-title">${escapeHtml(marketingPackage.productTitle)}</h3>
+                </div>
+                <span class="pill status-info">Preview</span>
+            </div>
+
+            <div class="marketing-content-grid">
+                <p class="marketing-content-item"><span>Instagram Caption</span>${escapeHtml(marketingPackage.instagramCaption)}</p>
+                <p class="marketing-content-item"><span>Facebook Post</span>${escapeHtml(marketingPackage.facebookPost)}</p>
+                <p class="marketing-content-item"><span>TikTok Caption</span>${escapeHtml(marketingPackage.tiktokCaption)}</p>
+                <p class="marketing-content-item"><span>Pinterest Description</span>${escapeHtml(marketingPackage.pinterestDescription)}</p>
+                <p class="marketing-content-item"><span>Email Subject Line</span>${escapeHtml(marketingPackage.emailSubjectLine)}</p>
+                <p class="marketing-content-item"><span>Short Email Body</span>${escapeHtml(marketingPackage.shortEmailBody)}</p>
+                <p class="marketing-content-item"><span>Product SEO Title</span>${escapeHtml(marketingPackage.productSeoTitle)}</p>
+                <p class="marketing-content-item"><span>Product Meta Description</span>${escapeHtml(marketingPackage.productMetaDescription)}</p>
+                <p class="marketing-content-item"><span>Suggested Hashtags</span>${escapeHtml(marketingPackage.suggestedHashtags)}</p>
+            </div>
+        </article>
+    `;
+
+    marketingPreview.querySelectorAll('.marketing-preview-card').forEach((card) => observeAnimatedElement(card));
+}
+
+// Sync queue social post status to Drafted whenever a package is saved for a product.
+function syncPublishingQueueSocialStatusToDrafted(productId) {
+    const queueItems = loadPublishingQueue();
+    const updatedQueueItems = queueItems.map((item) => {
+        if (item.productId !== productId) {
+            return item;
+        }
+
+        return {
+            ...item,
+            socialPostStatus: 'Drafted'
+        };
+    });
+
+    savePublishingQueue(updatedQueueItems);
+    refreshPublishingQueue();
+}
+
+// Convert saved marketing package collection to CSV format.
+function marketingPackagesToCsv(packages) {
+    const headers = [
+        'Package ID',
+        'Product ID',
+        'Product Title',
+        'Collection',
+        'Marketing Tone',
+        'Target Platform',
+        'Campaign Goal',
+        'Audience',
+        'Promo Angle',
+        'Instagram Caption',
+        'Facebook Post',
+        'TikTok Caption',
+        'Pinterest Description',
+        'Email Subject Line',
+        'Short Email Body',
+        'Product SEO Title',
+        'Product Meta Description',
+        'Suggested Hashtags',
+        'Date Created'
+    ];
+
+    const escapeCsv = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+
+    const rows = packages.map((item) => [
+        item.packageId,
+        item.productId,
+        item.productTitle,
+        item.collection,
+        item.marketingTone,
+        item.targetPlatform,
+        item.campaignGoal,
+        item.audience,
+        item.promoAngle,
+        item.instagramCaption,
+        item.facebookPost,
+        item.tiktokCaption,
+        item.pinterestDescription,
+        item.emailSubjectLine,
+        item.shortEmailBody,
+        item.productSeoTitle,
+        item.productMetaDescription,
+        item.suggestedHashtags,
+        item.createdDate
+    ]);
+
+    return [headers, ...rows]
+        .map((row) => row.map(escapeCsv).join(','))
+        .join('\n');
+}
+
+// Copy text to clipboard with a fallback for environments without clipboard permissions.
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+    }
+
+    return new Promise((resolve, reject) => {
+        const helperInput = document.createElement('textarea');
+        helperInput.value = text;
+        helperInput.style.position = 'fixed';
+        helperInput.style.opacity = '0';
+        document.body.appendChild(helperInput);
+        helperInput.focus();
+        helperInput.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            helperInput.remove();
+            if (successful) {
+                resolve();
+                return;
+            }
+
+            reject(new Error('Copy command failed.'));
+        } catch (error) {
+            helperInput.remove();
+            reject(error);
+        }
+    });
+}
+
+// Render full package fields into the modal for detailed review.
+function renderMarketingPackageModal(packageRecord) {
+    if (!marketingPackageModalContent || !packageRecord) {
+        return;
+    }
+
+    marketingPackageModalContent.innerHTML = `
+        <div class="product-card-top">
+            <div>
+                <p class="product-id">${escapeHtml(packageRecord.productId)}</p>
+                <h3 class="product-title">${escapeHtml(packageRecord.productTitle)}</h3>
+            </div>
+            <span class="pill status-info">Package Detail</span>
+        </div>
+        <div class="marketing-content-grid">
+            <p class="marketing-content-item"><span>Platform</span>${escapeHtml(packageRecord.targetPlatform)}</p>
+            <p class="marketing-content-item"><span>Campaign Goal</span>${escapeHtml(packageRecord.campaignGoal)}</p>
+            <p class="marketing-content-item"><span>Tone</span>${escapeHtml(packageRecord.marketingTone)}</p>
+            <p class="marketing-content-item"><span>Audience</span>${escapeHtml(packageRecord.audience)}</p>
+            <p class="marketing-content-item"><span>Promo Angle</span>${escapeHtml(packageRecord.promoAngle)}</p>
+            <p class="marketing-content-item"><span>Instagram Caption</span>${escapeHtml(packageRecord.instagramCaption)}</p>
+            <p class="marketing-content-item"><span>Facebook Post</span>${escapeHtml(packageRecord.facebookPost)}</p>
+            <p class="marketing-content-item"><span>TikTok Caption</span>${escapeHtml(packageRecord.tiktokCaption)}</p>
+            <p class="marketing-content-item"><span>Pinterest Description</span>${escapeHtml(packageRecord.pinterestDescription)}</p>
+            <p class="marketing-content-item"><span>Email Subject Line</span>${escapeHtml(packageRecord.emailSubjectLine)}</p>
+            <p class="marketing-content-item"><span>Short Email Body</span>${escapeHtml(packageRecord.shortEmailBody)}</p>
+            <p class="marketing-content-item"><span>SEO Title</span>${escapeHtml(packageRecord.productSeoTitle)}</p>
+            <p class="marketing-content-item"><span>Meta Description</span>${escapeHtml(packageRecord.productMetaDescription)}</p>
+            <p class="marketing-content-item"><span>Suggested Hashtags</span>${escapeHtml(packageRecord.suggestedHashtags)}</p>
+            <p class="marketing-content-item"><span>Saved On</span>${escapeHtml(packageRecord.createdDate)}</p>
+        </div>
+    `;
+}
+
+// Open details modal for a specific package.
+function openMarketingPackageModal(packageRecord) {
+    if (!marketingPackageModal || !packageRecord) {
+        return;
+    }
+
+    renderMarketingPackageModal(packageRecord);
+    marketingPackageModal.hidden = false;
+    marketingPackageModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+// Close details modal and restore page scroll.
+function closeMarketingPackageModal() {
+    if (!marketingPackageModal) {
+        return;
+    }
+
+    marketingPackageModal.hidden = true;
+    marketingPackageModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+
+    // Remove stale content so details are always rendered from an explicit package selection.
+    if (marketingPackageModalContent) {
+        marketingPackageModalContent.innerHTML = '';
+    }
+}
+
+// Render saved marketing packages as responsive cards.
+function refreshMarketingPackages() {
+    if (!marketingPackagesGrid) {
+        return;
+    }
+
+    const packages = loadMarketingPackages();
+    const sortedPackages = [...packages].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    if (marketingPackagesSummary) {
+        marketingPackagesSummary.textContent = `${sortedPackages.length} saved marketing packages`;
+    }
+
+    if (!sortedPackages.length) {
+        marketingPackagesGrid.innerHTML = '<article class="product-empty-state">No saved marketing packages yet. Generate and save a package to build your reusable campaign library.</article>';
+        return;
+    }
+
+    marketingPackagesGrid.innerHTML = sortedPackages.map((item) => `
+        <article class="marketing-package-card" data-package-id="${escapeHtml(item.packageId)}">
+            <div class="product-card-top">
+                <div>
+                    <p class="product-id">${escapeHtml(item.productId)}</p>
+                    <h3 class="product-title">${escapeHtml(item.productTitle)}</h3>
+                </div>
+                <span class="pill status-good">Saved</span>
+            </div>
+
+            <div class="product-meta">
+                <p class="product-meta-item"><span class="product-meta-label">Platform</span><span class="product-meta-value">${escapeHtml(item.targetPlatform)}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Campaign Goal</span><span class="product-meta-value">${escapeHtml(item.campaignGoal)}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Tone</span><span class="product-meta-value">${escapeHtml(item.marketingTone)}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Audience</span><span class="product-meta-value">${escapeHtml(item.audience)}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Promo Angle</span><span class="product-meta-value">${escapeHtml(item.promoAngle)}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Instagram Caption</span><span class="product-meta-value">${escapeHtml(`${item.instagramCaption.slice(0, 70)}${item.instagramCaption.length > 70 ? '...' : ''}`)}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Saved On</span><span class="product-meta-value">${escapeHtml(item.createdDate)}</span></p>
+            </div>
+
+            <div class="marketing-package-actions">
+                <button class="btn btn-secondary view-marketing-package-btn" type="button" data-package-id="${escapeHtml(item.packageId)}">View Package Details</button>
+                <button class="btn btn-secondary copy-package-caption-btn" type="button" data-package-id="${escapeHtml(item.packageId)}">Copy Caption</button>
+                <button class="btn btn-secondary delete-marketing-package-btn" type="button" data-package-id="${escapeHtml(item.packageId)}">Delete Package</button>
+            </div>
+        </article>
+    `).join('');
+
+    marketingPackagesGrid.querySelectorAll('.marketing-package-card').forEach((card) => observeAnimatedElement(card));
 }
 
 // Convert a mock idea score (e.g., 8.6 / 10) to an approximate margin percentage.
@@ -624,6 +978,9 @@ function buildProductFromForm(existingProducts) {
         estimatedCost,
         estimatedMargin,
         designStatus: designStatusSelect?.value || 'Not Started',
+        designPrompt: '',
+        artworkConcept: '',
+        revisionNotes: '',
         launchChannel: launchChannelSelect?.value || 'Manual',
         notes: productNotesInput?.value.trim() || '',
         createdAt: timestamp.toISOString(),
@@ -805,6 +1162,135 @@ function refreshProductLibrary() {
     const allProducts = loadProductLibrary();
     const visibleProducts = sortProducts(filterProducts(allProducts));
     renderProductGrid(visibleProducts);
+    refreshDesignApprovalQueue();
+}
+
+// Keep only product records currently in design workflow states.
+function getDesignApprovalQueueProducts(products) {
+    return products.filter((product) => designApprovalQueueStatuses.includes(product.designStatus || 'Not Started'));
+}
+
+// Apply queue-specific filters for design status, collection, and priority.
+function filterDesignApprovalQueueProducts(products) {
+    const selectedDesignStatus = designQueueStatusFilter?.value || 'all';
+    const selectedCollection = designQueueCollectionFilter?.value || 'all';
+    const selectedPriority = designQueuePriorityFilter?.value || 'all';
+
+    return products.filter((product) => {
+        const designStatus = product.designStatus || 'Not Started';
+        const statusMatch = selectedDesignStatus === 'all' || designStatus === selectedDesignStatus;
+        const collectionMatch = selectedCollection === 'all' || product.collection === selectedCollection;
+        const priorityMatch = selectedPriority === 'all' || product.priority === selectedPriority;
+
+        return statusMatch && collectionMatch && priorityMatch;
+    });
+}
+
+// Render Design Approval Queue cards and editing controls.
+function refreshDesignApprovalQueue() {
+    if (!designApprovalGrid) {
+        return;
+    }
+
+    const products = loadProductLibrary();
+    const queueProducts = getDesignApprovalQueueProducts(products);
+    const visibleProducts = filterDesignApprovalQueueProducts(queueProducts);
+
+    if (!visibleProducts.length) {
+        designApprovalGrid.innerHTML = '<article class="product-empty-state">No products currently match the Design Approval Queue filters. Add items in Product Library or adjust queue filters.</article>';
+        return;
+    }
+
+    designApprovalGrid.innerHTML = visibleProducts.map((product) => `
+        <article class="design-approval-card" data-product-id="${escapeHtml(product.id)}">
+            <div class="product-card-top">
+                <div>
+                    <p class="product-id">${escapeHtml(product.id)}</p>
+                    <h3 class="product-title">${escapeHtml(product.title)}</h3>
+                </div>
+                <span class="pill ${statusClassForProduct(product.status)}">${escapeHtml(product.status || 'In Design')}</span>
+            </div>
+
+            <div class="product-meta">
+                <p class="product-meta-item"><span class="product-meta-label">Collection</span><span class="product-meta-value">${escapeHtml(product.collection || 'N/A')}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Product Type</span><span class="product-meta-value">${escapeHtml(product.productType || 'N/A')}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Design Status</span><span class="product-meta-value">${escapeHtml(product.designStatus || 'Not Started')}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Priority</span><span class="product-meta-value ${priorityClass(product.priority)}">${escapeHtml(product.priority || 'Medium')}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Notes</span><span class="product-meta-value">${escapeHtml(product.notes || 'N/A')}</span></p>
+            </div>
+
+            <div class="design-approval-editor">
+                <label class="generator-field" for="designPrompt-${escapeHtml(product.id)}">
+                    <span>Design Prompt</span>
+                    <textarea id="designPrompt-${escapeHtml(product.id)}" class="design-queue-input" data-design-field="designPrompt" data-product-id="${escapeHtml(product.id)}" rows="2" placeholder="Add or refine the design prompt">${escapeHtml(product.designPrompt || '')}</textarea>
+                </label>
+
+                <label class="generator-field" for="artworkConcept-${escapeHtml(product.id)}">
+                    <span>Artwork Concept</span>
+                    <textarea id="artworkConcept-${escapeHtml(product.id)}" class="design-queue-input" data-design-field="artworkConcept" data-product-id="${escapeHtml(product.id)}" rows="2" placeholder="Describe composition, typography, and visual direction">${escapeHtml(product.artworkConcept || '')}</textarea>
+                </label>
+
+                <label class="generator-field" for="designStatus-${escapeHtml(product.id)}">
+                    <span>Design Status</span>
+                    <select id="designStatus-${escapeHtml(product.id)}" class="design-queue-select" data-design-field="designStatus" data-product-id="${escapeHtml(product.id)}">
+                        <option value="Not Started" ${(product.designStatus || 'Not Started') === 'Not Started' ? 'selected' : ''}>Not Started</option>
+                        <option value="Prompt Written" ${(product.designStatus || 'Not Started') === 'Prompt Written' ? 'selected' : ''}>Prompt Written</option>
+                        <option value="AI Generated" ${(product.designStatus || 'Not Started') === 'AI Generated' ? 'selected' : ''}>AI Generated</option>
+                        <option value="Needs Revision" ${(product.designStatus || 'Not Started') === 'Needs Revision' ? 'selected' : ''}>Needs Revision</option>
+                        <option value="Approved" ${(product.designStatus || 'Not Started') === 'Approved' ? 'selected' : ''}>Approved</option>
+                    </select>
+                </label>
+
+                <label class="generator-field" for="revisionNotes-${escapeHtml(product.id)}">
+                    <span>Revision Notes</span>
+                    <textarea id="revisionNotes-${escapeHtml(product.id)}" class="design-queue-input" data-design-field="revisionNotes" data-product-id="${escapeHtml(product.id)}" rows="2" placeholder="Capture revision requests and QA notes">${escapeHtml(product.revisionNotes || '')}</textarea>
+                </label>
+            </div>
+
+            <div class="design-approval-actions">
+                <button class="btn btn-secondary save-design-notes-btn" type="button" data-product-id="${escapeHtml(product.id)}">Save Design Notes</button>
+                <button class="btn btn-secondary mark-ai-generated-btn" type="button" data-product-id="${escapeHtml(product.id)}">Mark AI Generated</button>
+                <button class="btn btn-secondary mark-needs-revision-btn" type="button" data-product-id="${escapeHtml(product.id)}">Needs Revision</button>
+                <button class="btn btn-primary approve-design-btn" type="button" data-product-id="${escapeHtml(product.id)}">Approve Design</button>
+            </div>
+        </article>
+    `).join('');
+
+    designApprovalGrid.querySelectorAll('.design-approval-card').forEach((card) => observeAnimatedElement(card));
+}
+
+// Read current design editor field values from one queue card.
+function getDesignQueueCardValues(productId) {
+    const escapedProductId = CSS.escape(productId);
+    const card = designApprovalGrid?.querySelector(`.design-approval-card[data-product-id="${escapedProductId}"]`);
+    if (!card) {
+        return null;
+    }
+
+    return {
+        designPrompt: card.querySelector('[data-design-field="designPrompt"]')?.value.trim() || '',
+        artworkConcept: card.querySelector('[data-design-field="artworkConcept"]')?.value.trim() || '',
+        designStatus: card.querySelector('[data-design-field="designStatus"]')?.value || 'Not Started',
+        revisionNotes: card.querySelector('[data-design-field="revisionNotes"]')?.value.trim() || ''
+    };
+}
+
+// Persist design updates for a single product in Product Library.
+function updateProductDesignFields(productId, updates) {
+    const products = loadProductLibrary();
+    const updatedProducts = products.map((product) => {
+        if (product.id !== productId) {
+            return product;
+        }
+
+        return {
+            ...product,
+            ...updates
+        };
+    });
+
+    saveProductLibrary(updatedProducts);
+    refreshProductLibrary();
 }
 
 // Create a product payload from an idea card with required default statuses.
@@ -824,6 +1310,9 @@ function createProductFromIdea(idea) {
         estimatedCost: null,
         estimatedMargin: importedMargin,
         designStatus: 'Not Started',
+        designPrompt: '',
+        artworkConcept: '',
+        revisionNotes: '',
         launchChannel: 'Manual',
         notes: idea.marketingAngle || '',
         createdAt: timestamp.toISOString(),
@@ -905,6 +1394,19 @@ if (titleSearchInput) {
 
 if (sortProductsSelect) {
     sortProductsSelect.addEventListener('change', refreshProductLibrary);
+}
+
+// Bind Design Approval Queue filter controls.
+if (designQueueStatusFilter) {
+    designQueueStatusFilter.addEventListener('change', refreshDesignApprovalQueue);
+}
+
+if (designQueueCollectionFilter) {
+    designQueueCollectionFilter.addEventListener('change', refreshDesignApprovalQueue);
+}
+
+if (designQueuePriorityFilter) {
+    designQueuePriorityFilter.addEventListener('change', refreshDesignApprovalQueue);
 }
 
 // Convert products array to CSV content with quote-safe escaping.
@@ -1037,6 +1539,74 @@ if (productGrid) {
             saveProductLibrary(updatedProducts);
             refreshProductLibrary();
             showMessage(`${productId} marked as Published.`, 'success');
+        }
+    });
+}
+
+// Delegate Design Approval Queue actions and status transitions.
+if (designApprovalGrid) {
+    designApprovalGrid.addEventListener('click', (event) => {
+        const actionButton = event.target.closest('button[data-product-id]');
+        if (!actionButton) {
+            return;
+        }
+
+        const productId = actionButton.dataset.productId;
+        if (!productId) {
+            return;
+        }
+
+        const currentValues = getDesignQueueCardValues(productId);
+        if (!currentValues) {
+            showMessage('Design card values could not be read.', 'error');
+            return;
+        }
+
+        if (actionButton.classList.contains('save-design-notes-btn')) {
+            updateProductDesignFields(productId, {
+                designPrompt: currentValues.designPrompt,
+                artworkConcept: currentValues.artworkConcept,
+                designStatus: currentValues.designStatus,
+                revisionNotes: currentValues.revisionNotes,
+                status: currentValues.designStatus === 'Approved' ? 'Ready for Mockup' : 'In Design'
+            });
+            showMessage(`${productId} design notes saved.`, 'success');
+            return;
+        }
+
+        if (actionButton.classList.contains('mark-ai-generated-btn')) {
+            updateProductDesignFields(productId, {
+                designPrompt: currentValues.designPrompt,
+                artworkConcept: currentValues.artworkConcept,
+                designStatus: 'AI Generated',
+                revisionNotes: currentValues.revisionNotes,
+                status: 'In Design'
+            });
+            showMessage(`${productId} set to AI Generated.`, 'success');
+            return;
+        }
+
+        if (actionButton.classList.contains('mark-needs-revision-btn')) {
+            updateProductDesignFields(productId, {
+                designPrompt: currentValues.designPrompt,
+                artworkConcept: currentValues.artworkConcept,
+                designStatus: 'Needs Revision',
+                revisionNotes: currentValues.revisionNotes,
+                status: 'In Design'
+            });
+            showMessage(`${productId} marked as Needs Revision.`, 'success');
+            return;
+        }
+
+        if (actionButton.classList.contains('approve-design-btn')) {
+            updateProductDesignFields(productId, {
+                designPrompt: currentValues.designPrompt,
+                artworkConcept: currentValues.artworkConcept,
+                designStatus: 'Approved',
+                revisionNotes: currentValues.revisionNotes,
+                status: 'Ready for Mockup'
+            });
+            showMessage(`${productId} approved and moved to Ready for Mockup.`, 'success');
         }
     });
 }
@@ -1195,7 +1765,159 @@ if (exportPublishingQueueCsvBtn) {
     });
 }
 
+// Generate a mock marketing package using current form inputs and selected queue product.
+if (generateMarketingPackageBtn) {
+    generateMarketingPackageBtn.addEventListener('click', () => {
+        const selectedProductId = marketingQueueProductSelect?.value || '';
+        if (!selectedProductId) {
+            showMessage('Select a Publishing Queue product first.', 'error');
+            return;
+        }
+
+        const queueItem = loadPublishingQueue().find((item) => item.productId === selectedProductId);
+        if (!queueItem) {
+            showMessage('Selected queue product could not be found.', 'error');
+            return;
+        }
+
+        pendingMarketingPackage = buildMockMarketingPackage(queueItem, {
+            marketingTone: marketingToneInput?.value.trim(),
+            targetPlatform: marketingPlatformInput?.value.trim(),
+            campaignGoal: marketingGoalInput?.value.trim(),
+            audience: marketingAudienceInput?.value.trim(),
+            promoAngle: marketingPromoAngleInput?.value.trim()
+        });
+
+        renderMarketingPreview(pendingMarketingPackage);
+        if (saveMarketingPackageBtn) {
+            saveMarketingPackageBtn.disabled = false;
+        }
+
+        showMessage('Mock marketing package generated.', 'success');
+    });
+}
+
+// Save the generated package to localStorage and sync queue social status.
+if (saveMarketingPackageBtn) {
+    saveMarketingPackageBtn.addEventListener('click', () => {
+        if (!pendingMarketingPackage) {
+            showMessage('Generate a package before saving.', 'error');
+            return;
+        }
+
+        const packages = loadMarketingPackages();
+        saveMarketingPackages([pendingMarketingPackage, ...packages]);
+        syncPublishingQueueSocialStatusToDrafted(pendingMarketingPackage.productId);
+        refreshMarketingPackages();
+
+        if (marketingToneInput) {
+            marketingToneInput.value = '';
+        }
+
+        if (marketingPlatformInput) {
+            marketingPlatformInput.value = '';
+        }
+
+        if (marketingGoalInput) {
+            marketingGoalInput.value = '';
+        }
+
+        if (marketingAudienceInput) {
+            marketingAudienceInput.value = '';
+        }
+
+        if (marketingPromoAngleInput) {
+            marketingPromoAngleInput.value = '';
+        }
+
+        pendingMarketingPackage = null;
+        renderMarketingPreview(null);
+        saveMarketingPackageBtn.disabled = true;
+        showMessage('Marketing package saved and queue social status set to Drafted.', 'success');
+    });
+}
+
+// Handle saved package actions: copy caption and delete package.
+if (marketingPackagesGrid) {
+    marketingPackagesGrid.addEventListener('click', (event) => {
+        const viewButton = event.target.closest('.view-marketing-package-btn');
+        if (viewButton) {
+            const packageId = viewButton.dataset.packageId;
+            const packageRecord = loadMarketingPackages().find((item) => item.packageId === packageId);
+            if (!packageRecord) {
+                showMessage('Marketing package not found.', 'error');
+                return;
+            }
+
+            openMarketingPackageModal(packageRecord);
+            return;
+        }
+
+        const copyButton = event.target.closest('.copy-package-caption-btn');
+        if (copyButton) {
+            const packageId = copyButton.dataset.packageId;
+            const packageRecord = loadMarketingPackages().find((item) => item.packageId === packageId);
+            if (!packageRecord) {
+                showMessage('Marketing package not found.', 'error');
+                return;
+            }
+
+            copyToClipboard(packageRecord.instagramCaption)
+                .then(() => showMessage('Instagram caption copied.', 'success'))
+                .catch(() => showMessage('Could not copy caption.', 'error'));
+            return;
+        }
+
+        const deleteButton = event.target.closest('.delete-marketing-package-btn');
+        if (deleteButton) {
+            const packageId = deleteButton.dataset.packageId;
+            const remainingPackages = loadMarketingPackages().filter((item) => item.packageId !== packageId);
+            saveMarketingPackages(remainingPackages);
+            refreshMarketingPackages();
+            showMessage('Marketing package deleted.', 'success');
+        }
+    });
+}
+
+// Bind modal close controls for package detail view.
+if (closeMarketingPackageModalBtn) {
+    closeMarketingPackageModalBtn.addEventListener('click', closeMarketingPackageModal);
+}
+
+if (marketingPackageModal) {
+    marketingPackageModal.addEventListener('click', (event) => {
+        if (event.target === marketingPackageModal) {
+            closeMarketingPackageModal();
+        }
+    });
+}
+
+if (marketingPackageModalPanel) {
+    marketingPackageModalPanel.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+}
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && marketingPackageModal && !marketingPackageModal.hidden) {
+        closeMarketingPackageModal();
+    }
+});
+
+// Export saved marketing packages as CSV.
+if (exportMarketingPackagesCsvBtn) {
+    exportMarketingPackagesCsvBtn.addEventListener('click', () => {
+        const packages = loadMarketingPackages();
+        downloadTextFile('suneson-marketing-packages.csv', marketingPackagesToCsv(packages), 'text/csv;charset=utf-8');
+        showMessage('Marketing packages exported as CSV.', 'success');
+    });
+}
+
 // Initialize Publishing Queue from localStorage on page load.
+closeMarketingPackageModal();
 refreshPublishingQueue();
+renderMarketingPreview(null);
+refreshMarketingPackages();
+refreshDesignApprovalQueue();
 
 console.log('Suneson Commerce OS internal dashboard initialized.');
