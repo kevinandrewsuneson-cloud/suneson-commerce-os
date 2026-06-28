@@ -436,7 +436,6 @@ h2 {
   .split-card,
   .launch-card {
     grid-template-columns: 1fr;
-    display: grid;
   }
 
   .topbar {
@@ -448,7 +447,7 @@ h2 {
 @media (max-width: 640px) {
   .page-shell,
   .footer {
-    width: min(100% - 1.25rem, 1180px);
+    width: min(1180px, calc(100% - 1.25rem));
   }
 
   .section {

@@ -32,10 +32,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const workflowSteps = [...document.querySelectorAll(".workflow-step")];
   let activeStep = 0;
-
-  window.setInterval(() => {
+  const workflowInterval = window.setInterval(() => {
     workflowSteps[activeStep].classList.remove("is-active");
     activeStep = (activeStep + 1) % workflowSteps.length;
     workflowSteps[activeStep].classList.add("is-active");
   }, 1800);
+
+  window.addEventListener(
+    "pagehide",
+    () => {
+      window.clearInterval(workflowInterval);
+    },
+    { once: true }
+  );
 });
