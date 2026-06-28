@@ -1,0 +1,55 @@
+const countUp = (element) => {
+  const target = Number(element.dataset.count || 0);
+  const isCurrency = element.dataset.currency === "true";
+  const duration = 1200;
+  const start = performance.now();
+
+  const render = (value) => {
+    element.textContent = isCurrency
+      ? `$${value.toLocaleString()}`
+      : value.toLocaleString();
+  };
+
+  const step = (timestamp) => {
+    const progress = Math.min((timestamp - start) / duration, 1);
+    const value = Math.round(target * progress);
+    render(value);
+
+    if (progress < 1) {
+      window.requestAnimationFrame(step);
+    }
+  };
+
+  window.requestAnimationFrame(step);
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  const yearElement = document.getElementById("year");
+
+  if (yearElement) {
+    yearElement.textContent = new Date().getFullYear();
+  }
+
+  document.querySelectorAll("[data-count]").forEach((element) => {
+    countUp(element);
+  });
+
+  const workflowSteps = [...document.querySelectorAll(".workflow-step")];
+
+  if (workflowSteps.length > 0) {
+    let activeStep = 0;
+    const workflowRotationInterval = window.setInterval(() => {
+      workflowSteps[activeStep].classList.remove("is-active");
+      activeStep = (activeStep + 1) % workflowSteps.length;
+      workflowSteps[activeStep].classList.add("is-active");
+    }, 1800);
+
+    window.addEventListener(
+      "pagehide",
+      () => {
+        window.clearInterval(workflowRotationInterval);
+      },
+      { once: true }
+    );
+  }
+});
