@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suneson Commerce OS - Internal Apparel Operations Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-content">
+            <div class="logo">Suneson Commerce OS</div>
+            <ul class="nav-links">
+                <li><a href="#idea-pipeline">Ideas</a></li>
+                <li><a href="#design-queue">Design</a></li>
+                <li><a href="#launches">Launches</a></li>
+                <li><a href="#launch-checklist">Checklist</a></li>
+                <li><a href="#analytics">Profit</a></li>
+                <li><a href="#task-priorities" class="cta-btn">Operator Queue</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container hero-grid">
+            <div class="hero-content">
+                <p class="eyebrow">Internal Operator Dashboard</p>
+                <h1 class="hero-title">Run The Entire Apparel Business From One Command Surface</h1>
+                <p class="hero-subtitle">Track concept flow, clear design blockers, orchestrate launches, automate social output, and monitor profitability without leaving your operating console.</p>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary" onclick="document.querySelector('#task-priorities').scrollIntoView({behavior: 'smooth'})">Open Priority Queue</button>
+                    <button class="btn btn-secondary" onclick="showMessage('Daily sync report exported to ops feed.', 'success')">Export Daily Sync</button>
+                </div>
+            </div>
+            <div class="hero-panel card">
+                <div class="panel-header">
+                    <h3>Today At A Glance</h3>
+                    <span class="pill status-good">System Healthy</span>
+                </div>
+                <div class="metrics-grid">
+                    <div>
+                        <p class="metric-label">Net Margin</p>
+                        <p class="metric-value">31.4%</p>
+                    </div>
+                    <div>
+                        <p class="metric-label">Orders Awaiting Fulfillment</p>
+                        <p class="metric-value">42</p>
+                    </div>
+                    <div>
+                        <p class="metric-label">Designs Ready To Launch</p>
+                        <p class="metric-value">7</p>
+                    </div>
+                    <div>
+                        <p class="metric-label">Scheduled Social Posts</p>
+                        <p class="metric-value">18</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="commerce-dashboard" id="commerce-dashboard">
+        <div class="container">
+            <div class="dashboard-head">
+                <h2>Commerce OS Dashboard</h2>
+                <p class="section-subtitle">Live operating metrics for this week. Mock data shown for interface validation and workflow planning.</p>
+            </div>
+            <div class="dashboard-card-grid">
+                <article class="dashboard-card">
+                    <p class="dash-label">New Ideas This Week</p>
+                    <p class="dash-value">14</p>
+                    <p class="dash-meta">+5 vs last week • 4 tagged high-priority</p>
+                </article>
+                <article class="dashboard-card">
+                    <p class="dash-label">Designs Awaiting Approval</p>
+                    <p class="dash-value">9</p>
+                    <p class="dash-meta">3 urgent approvals blocking launch queue</p>
+                </article>
+                <article class="dashboard-card">
+                    <p class="dash-label">Products Ready to Publish</p>
+                    <p class="dash-value">6</p>
+                    <p class="dash-meta">2 bundles and 4 standalone SKUs</p>
+                </article>
+                <article class="dashboard-card">
+                    <p class="dash-label">Social Posts Scheduled</p>
+                    <p class="dash-value">22</p>
+                    <p class="dash-meta">Coverage across IG, TikTok, Pinterest (7-day)</p>
+                </article>
+                <article class="dashboard-card">
+                    <p class="dash-label">Open Customer Issues</p>
+                    <p class="dash-value">11</p>
+                    <p class="dash-meta">8 support tickets • 3 fulfillment escalations</p>
+                </article>
+                <article class="dashboard-card dashboard-card-highlight">
+                    <p class="dash-label">Estimated Monthly Profit</p>
+                    <p class="dash-value">$48,760</p>
+                    <p class="dash-meta">Projected net after ads, fulfillment, and returns</p>
+                </article>
+                <article class="dashboard-card">
+                    <p class="dash-label">Best Performing Collection</p>
+                    <p class="dash-value">Midwest Humor</p>
+                    <p class="dash-meta">38.4% gross margin • 4.1% conversion rate</p>
+                </article>
+                <article class="dashboard-card dashboard-card-alert">
+                    <p class="dash-label">Low Margin Products</p>
+                    <p class="dash-value">5</p>
+                    <p class="dash-meta">Average margin 12.8% • pricing review recommended</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="idea-generator" id="idea-generator">
+        <div class="container">
+            <div class="generator-head">
+                <h2>Idea Generator</h2>
+                <p class="section-subtitle">Use operator inputs to mock rapid apparel concepts before sending items into the design queue.</p>
+            </div>
+
+            <div class="generator-shell card">
+                <div class="generator-inputs">
+                    <label class="generator-field" for="nicheInput">
+                        <span>Niche</span>
+                        <input id="nicheInput" type="text" placeholder="Example: Midwest Humor">
+                    </label>
+                    <label class="generator-field" for="trendInput">
+                        <span>Trend</span>
+                        <input id="trendInput" type="text" placeholder="Example: Vintage Distressed Graphics">
+                    </label>
+                    <label class="generator-field" for="toneInput">
+                        <span>Tone</span>
+                        <input id="toneInput" type="text" placeholder="Example: Playful and sarcastic">
+                    </label>
+                    <label class="generator-field" for="productTypeInput">
+                        <span>Product Type</span>
+                        <input id="productTypeInput" type="text" placeholder="Example: Oversized Tee">
+                    </label>
+                    <label class="generator-field" for="targetCustomerInput">
+                        <span>Target Customer</span>
+                        <input id="targetCustomerInput" type="text" placeholder="Example: 25-40 weekend hobbyists">
+                    </label>
+                </div>
+
+                <button class="btn btn-primary generator-button" id="generateIdeasBtn" type="button">Generate Product Ideas</button>
+
+                <div class="generated-ideas" id="generatedIdeas" aria-live="polite"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="launch-checklist" id="launch-checklist">
+        <div class="container">
+            <div class="checklist-head">
+                <h2>Product Launch Checklist</h2>
+                <p class="section-subtitle">Track launch readiness for each release and resume exactly where you left off.</p>
+            </div>
+
+            <div class="checklist-shell card">
+                <ul class="checklist-list" id="launchChecklistList">
+                    <li class="checklist-item">
+                        <label>
+                            <input type="checkbox" data-checklist-id="design-approved">
+                            <span>Design approved</span>
+                        </label>
+                    </li>
+                    <li class="checklist-item">
+                        <label>
+                            <input type="checkbox" data-checklist-id="mockups-created">
+                            <span>Mockups created</span>
+                        </label>
+                    </li>
+                    <li class="checklist-item">
+                        <label>
+                            <input type="checkbox" data-checklist-id="product-description-written">
+                            <span>Product description written</span>
+                        </label>
+                    </li>
+                    <li class="checklist-item">
+                        <label>
+                            <input type="checkbox" data-checklist-id="seo-title-written">
+                            <span>SEO title written</span>
+                        </label>
+                    </li>
+                    <li class="checklist-item">
+                        <label>
+                            <input type="checkbox" data-checklist-id="price-checked">
+                            <span>Price checked</span>
+                        </label>
+                    </li>
+                    <li class="checklist-item">
+                        <label>
+                            <input type="checkbox" data-checklist-id="print-provider-selected">
+                            <span>Print provider selected</span>
+                        </label>
+                    </li>
+                    <li class="checklist-item">
+                        <label>
+                            <input type="checkbox" data-checklist-id="social-posts-scheduled">
+                            <span>Social posts scheduled</span>
+                        </label>
+                    </li>
+                    <li class="checklist-item">
+                        <label>
+                            <input type="checkbox" data-checklist-id="email-campaign-drafted">
+                            <span>Email campaign drafted</span>
+                        </label>
+                    </li>
+                    <li class="checklist-item">
+                        <label>
+                            <input type="checkbox" data-checklist-id="product-published">
+                            <span>Product published</span>
+                        </label>
+                    </li>
+                </ul>
+                <p class="checklist-progress" id="checklistProgress">0 of 9 items complete</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="overview">
+        <div class="container">
+            <h2>Operations Command Board</h2>
+            <p class="section-subtitle">Every unit below maps directly to the weekly operating cadence and accountability checkpoints.</p>
+            <div class="module-grid">
+                <a id="idea-pipeline" class="module-card" href="#idea-pipeline-detail">
+                    <h3>Idea Pipeline</h3>
+                    <p>Rank incoming concepts by audience fit, margin potential, and trend velocity.</p>
+                    <span class="pill status-info">26 active ideas</span>
+                </a>
+                <a id="design-queue" class="module-card" href="#design-queue-detail">
+                    <h3>Design Queue</h3>
+                    <p>Track revisions, asset approvals, and mockup readiness before production.</p>
+                    <span class="pill status-warning">4 blocked tasks</span>
+                </a>
+                <a id="launches" class="module-card" href="#launches-detail">
+                    <h3>Product Launches</h3>
+                    <p>Coordinate release windows, SKU activation, and cross-channel launch sequencing.</p>
+                    <span class="pill status-info">3 launches this week</span>
+                </a>
+                <a id="social" class="module-card" href="#social-detail">
+                    <h3>Social Media Automation</h3>
+                    <p>Automate content batching, posting cadence, and creative variations by channel.</p>
+                    <span class="pill status-good">94% queue fill</span>
+                </a>
+                <a id="fulfillment" class="module-card" href="#fulfillment-detail">
+                    <h3>Order Fulfillment</h3>
+                    <p>Surface SLA risk, route exceptions, and monitor print + ship completion times.</p>
+                    <span class="pill status-warning">6 orders at risk</span>
+                </a>
+                <a id="analytics" class="module-card" href="#analytics-detail">
+                    <h3>Profit Analytics</h3>
+                    <p>View gross profit by collection, CAC drift, and real-time margin compression.</p>
+                    <span class="pill status-good">+$4,280 this week</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-section" id="idea-pipeline-detail">
+        <div class="container">
+            <h2>Idea Pipeline</h2>
+            <div class="detail-table">
+                <div class="row header"><span>Concept</span><span>Demand Signal</span><span>Margin Score</span><span>Status</span></div>
+                <div class="row"><span>Retro Caddie Humor Set</span><span>High</span><span>8.7</span><span class="pill status-good">Prioritized</span></div>
+                <div class="row"><span>Tailgate Tactics Series</span><span>Medium</span><span>7.9</span><span class="pill status-info">Researching</span></div>
+                <div class="row"><span>Halloween Roast Collection</span><span>Rising</span><span>8.1</span><span class="pill status-info">Validation</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-section alt" id="design-queue-detail">
+        <div class="container">
+            <h2>Design Queue</h2>
+            <div class="queue-cards">
+                <article class="card">
+                    <h3>BBQ Night Shift Tee</h3>
+                    <p>Needs final typography pass and dark fabric contrast check.</p>
+                    <span class="pill status-warning">Blocked: Approval</span>
+                </article>
+                <article class="card">
+                    <h3>Midwest Stateline Hoodie</h3>
+                    <p>Mockup package delivered, ready for storefront metadata merge.</p>
+                    <span class="pill status-good">Ready For Launch</span>
+                </article>
+                <article class="card">
+                    <h3>Poker River Run Drop</h3>
+                    <p>AI variant test running with 6 composition alternatives.</p>
+                    <span class="pill status-info">In Revision</span>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-section" id="launches-detail">
+        <div class="container">
+            <h2>Product Launches</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <strong>Mon 09:00</strong>
+                    <p>Golf Capsule v2: SKU publish + inventory sync completed.</p>
+                </div>
+                <div class="timeline-item">
+                    <strong>Wed 14:00</strong>
+                    <p>Summer Humor Batch: scheduled with staggered ad creative rollout.</p>
+                </div>
+                <div class="timeline-item">
+                    <strong>Fri 10:30</strong>
+                    <p>Limited Smokehouse Drop: awaiting final PDP QA signoff.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-section alt" id="social-detail">
+        <div class="container">
+            <h2>Social Media Automation</h2>
+            <div class="detail-table">
+                <div class="row header"><span>Channel</span><span>Posts Scheduled</span><span>Creative Variants</span><span>Health</span></div>
+                <div class="row"><span>Instagram</span><span>8</span><span>12</span><span class="pill status-good">On Track</span></div>
+                <div class="row"><span>TikTok</span><span>5</span><span>9</span><span class="pill status-info">Testing Hooks</span></div>
+                <div class="row"><span>Pinterest</span><span>5</span><span>7</span><span class="pill status-warning">Needs New Pins</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-section" id="fulfillment-detail">
+        <div class="container">
+            <h2>Order Fulfillment</h2>
+            <div class="queue-cards">
+                <article class="card">
+                    <h3>Print Queue</h3>
+                    <p>118 orders in processing. Avg print lead time: 11.4 hours.</p>
+                </article>
+                <article class="card">
+                    <h3>Shipping Queue</h3>
+                    <p>42 ready-to-ship. 6 flagged for address validation.</p>
+                </article>
+                <article class="card">
+                    <h3>SLA Risk</h3>
+                    <p>2.9% of weekly orders nearing promised ship window.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-section alt" id="analytics-detail">
+        <div class="container">
+            <h2>Profit Analytics</h2>
+            <div class="metrics-strip">
+                <div class="card">
+                    <p class="metric-label">Gross Profit (7d)</p>
+                    <p class="metric-value">$18,420</p>
+                </div>
+                <div class="card">
+                    <p class="metric-label">Ad Spend (7d)</p>
+                    <p class="metric-value">$6,870</p>
+                </div>
+                <div class="card">
+                    <p class="metric-label">Net Contribution</p>
+                    <p class="metric-value">$11,550</p>
+                </div>
+                <div class="card">
+                    <p class="metric-label">Return Rate</p>
+                    <p class="metric-value">2.1%</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="task-priorities" class="priority-section">
+        <div class="container">
+            <h2>Task Priorities</h2>
+            <p class="section-subtitle">Founder/operator queue for the next 24 hours. Focus executes top-down.</p>
+            <div class="priority-list">
+                <div class="priority-item">
+                    <span class="priority-rank">01</span>
+                    <div>
+                        <h3>Approve 4 blocked design assets</h3>
+                        <p>Unblocks Friday drop and social campaign dependencies.</p>
+                    </div>
+                    <span class="pill status-warning">High</span>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-rank">02</span>
+                    <div>
+                        <h3>Resolve 6 fulfillment exceptions</h3>
+                        <p>Prevent SLA misses and protect support load.</p>
+                    </div>
+                    <span class="pill status-warning">High</span>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-rank">03</span>
+                    <div>
+                        <h3>Confirm Monday launch metadata</h3>
+                        <p>Ensure PDP copy, pricing, and bundles are aligned.</p>
+                    </div>
+                    <span class="pill status-info">Medium</span>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-rank">04</span>
+                    <div>
+                        <h3>Review weekly profit compression report</h3>
+                        <p>Audit ad spend drift in Golf and Outdoors collections.</p>
+                    </div>
+                    <span class="pill status-info">Medium</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container footer-content">
+            <p>Suneson Commerce OS</p>
+            <p>Internal Apparel Operations Surface</p>
+            <p>Updated for founder/operator workflows</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
