@@ -13,6 +13,7 @@
             <ul class="nav-links">
                 <li><a href="#idea-pipeline">Ideas</a></li>
                 <li><a href="#design-queue">Design</a></li>
+                <li><a href="#product-library">Library</a></li>
                 <li><a href="#launches">Launches</a></li>
                 <li><a href="#launch-checklist">Checklist</a></li>
                 <li><a href="#analytics">Profit</a></li>
@@ -24,36 +25,50 @@
     <section class="hero">
         <div class="container hero-grid">
             <div class="hero-content">
-                <p class="eyebrow">Internal Operator Dashboard</p>
-                <h1 class="hero-title">Run The Entire Apparel Business From One Command Surface</h1>
-                <p class="hero-subtitle">Track concept flow, clear design blockers, orchestrate launches, automate social output, and monitor profitability without leaving your operating console.</p>
+                <p class="eyebrow">Founder Command Center</p>
+                <h1 class="hero-title">Suneson Commerce OS Founder Dashboard</h1>
+                <p class="hero-subtitle">Direct the week across product, content, fulfillment, and profit from one operator surface built for decision speed.</p>
                 <div class="hero-buttons">
-                    <button class="btn btn-primary" onclick="document.querySelector('#task-priorities').scrollIntoView({behavior: 'smooth'})">Open Priority Queue</button>
-                    <button class="btn btn-secondary" onclick="showMessage('Daily sync report exported to ops feed.', 'success')">Export Daily Sync</button>
+                    <button class="btn btn-primary" onclick="document.querySelector('#task-priorities').scrollIntoView({behavior: 'smooth'})">Review Founder Priorities</button>
+                    <button class="btn btn-secondary" onclick="showMessage('Founder daily brief exported.', 'success')">Export Founder Brief</button>
+                </div>
+                <div class="hero-kpis">
+                    <article class="hero-kpi">
+                        <p>Cash Collected Today</p>
+                        <strong>$3,940</strong>
+                    </article>
+                    <article class="hero-kpi">
+                        <p>Launch Readiness</p>
+                        <strong>83%</strong>
+                    </article>
+                    <article class="hero-kpi">
+                        <p>At-Risk Orders</p>
+                        <strong>6</strong>
+                    </article>
                 </div>
             </div>
             <div class="hero-panel card">
                 <div class="panel-header">
-                    <h3>Today At A Glance</h3>
-                    <span class="pill status-good">System Healthy</span>
+                    <h3>Founder Snapshot</h3>
+                    <span class="pill status-warning">2 Decisions Needed</span>
                 </div>
-                <div class="metrics-grid">
-                    <div>
-                        <p class="metric-label">Net Margin</p>
-                        <p class="metric-value">31.4%</p>
+                <div class="founder-focus-list">
+                    <div class="founder-focus-item">
+                        <p class="metric-label">Approve Design Blockers</p>
+                        <p class="metric-value">4 assets pending</p>
                     </div>
-                    <div>
-                        <p class="metric-label">Orders Awaiting Fulfillment</p>
-                        <p class="metric-value">42</p>
+                    <div class="founder-focus-item">
+                        <p class="metric-label">Protect Margin</p>
+                        <p class="metric-value">5 low-margin SKUs</p>
                     </div>
-                    <div>
-                        <p class="metric-label">Designs Ready To Launch</p>
-                        <p class="metric-value">7</p>
+                    <div class="founder-focus-item">
+                        <p class="metric-label">Revenue Run Rate</p>
+                        <p class="metric-value">$48.7K projected month</p>
                     </div>
-                    <div>
-                        <p class="metric-label">Scheduled Social Posts</p>
-                        <p class="metric-value">18</p>
-                    </div>
+                </div>
+                <div class="founder-alert">
+                    <p class="metric-label">Next Critical Window</p>
+                    <p>Friday 10:30 launch QA + social activation</p>
                 </div>
             </div>
         </div>
@@ -213,6 +228,168 @@
                     </li>
                 </ul>
                 <p class="checklist-progress" id="checklistProgress">0 of 9 items complete</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="product-library" id="product-library">
+        <div class="container">
+            <div class="library-head">
+                <h2>Product Library</h2>
+                <p class="section-subtitle">Central database for all apparel product ideas, design states, and launch readiness across channels.</p>
+            </div>
+
+            <form class="product-entry-form card" id="productEntryForm">
+                <div class="product-form-grid">
+                    <label class="generator-field" for="productTitleInput">
+                        <span>Product Title</span>
+                        <input id="productTitleInput" type="text" placeholder="Example: Backyard Birdie Tee" required>
+                    </label>
+
+                    <label class="generator-field" for="productCollectionInput">
+                        <span>Collection</span>
+                        <select id="productCollectionInput" required>
+                            <option value="">Select Collection</option>
+                            <option value="Golf">Golf</option>
+                            <option value="Poker">Poker</option>
+                            <option value="Midwest Humor">Midwest Humor</option>
+                            <option value="BBQ">BBQ</option>
+                            <option value="Outdoors">Outdoors</option>
+                            <option value="Seasonal">Seasonal</option>
+                            <option value="Original Characters">Original Characters</option>
+                        </select>
+                    </label>
+
+                    <label class="generator-field" for="productTypeSelect">
+                        <span>Product Type</span>
+                        <select id="productTypeSelect" required>
+                            <option value="">Select Product Type</option>
+                            <option value="T-Shirt">T-Shirt</option>
+                            <option value="Hoodie">Hoodie</option>
+                            <option value="Sweatshirt">Sweatshirt</option>
+                            <option value="Hat">Hat</option>
+                            <option value="Mug">Mug</option>
+                            <option value="Sticker">Sticker</option>
+                        </select>
+                    </label>
+
+                    <label class="generator-field" for="productStatusSelect">
+                        <span>Status</span>
+                        <select id="productStatusSelect" required>
+                            <option value="Idea">Idea</option>
+                            <option value="In Design">In Design</option>
+                            <option value="Ready for Mockup">Ready for Mockup</option>
+                            <option value="Ready to Publish">Ready to Publish</option>
+                            <option value="Published">Published</option>
+                            <option value="Retired">Retired</option>
+                        </select>
+                    </label>
+
+                    <label class="generator-field" for="productPrioritySelect">
+                        <span>Priority</span>
+                        <select id="productPrioritySelect" required>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </label>
+
+                    <label class="generator-field" for="estimatedPriceInput">
+                        <span>Estimated Price</span>
+                        <input id="estimatedPriceInput" type="number" min="0" step="0.01" placeholder="29.99">
+                    </label>
+
+                    <label class="generator-field" for="estimatedCostInput">
+                        <span>Estimated Cost</span>
+                        <input id="estimatedCostInput" type="number" min="0" step="0.01" placeholder="11.50">
+                    </label>
+
+                    <label class="generator-field" for="estimatedMarginInput">
+                        <span>Estimated Margin %</span>
+                        <input id="estimatedMarginInput" type="number" min="0" max="100" step="0.1" placeholder="61.7">
+                    </label>
+
+                    <label class="generator-field" for="designStatusSelect">
+                        <span>Design Status</span>
+                        <select id="designStatusSelect" required>
+                            <option value="Not Started">Not Started</option>
+                            <option value="Prompt Written">Prompt Written</option>
+                            <option value="AI Generated">AI Generated</option>
+                            <option value="Needs Revision">Needs Revision</option>
+                            <option value="Approved">Approved</option>
+                        </select>
+                    </label>
+
+                    <label class="generator-field" for="launchChannelSelect">
+                        <span>Launch Channel</span>
+                        <select id="launchChannelSelect" required>
+                            <option value="Shopify">Shopify</option>
+                            <option value="Etsy">Etsy</option>
+                            <option value="TikTok Shop">TikTok Shop</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="Manual">Manual</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="generator-field" for="productNotesInput">
+                    <span>Notes</span>
+                    <textarea id="productNotesInput" rows="3" placeholder="Optional production or merchandising notes"></textarea>
+                </label>
+
+                <div class="product-form-actions">
+                    <button class="btn btn-primary" id="addProductBtn" type="submit">Add Product</button>
+                    <button class="btn btn-secondary" id="cancelEditBtn" type="button" hidden>Cancel Edit</button>
+                </div>
+            </form>
+
+            <div class="library-shell card">
+                <div class="library-filters">
+                    <label class="generator-field" for="collectionFilter">
+                        <span>Collection</span>
+                        <select id="collectionFilter">
+                            <option value="all">All Collections</option>
+                            <option value="Golf">Golf</option>
+                            <option value="Poker">Poker</option>
+                            <option value="Midwest Humor">Midwest Humor</option>
+                            <option value="BBQ">BBQ</option>
+                            <option value="Outdoors">Outdoors</option>
+                            <option value="Seasonal">Seasonal</option>
+                            <option value="Original Characters">Original Characters</option>
+                        </select>
+                    </label>
+                    <label class="generator-field" for="statusFilter">
+                        <span>Status</span>
+                        <select id="statusFilter">
+                            <option value="all">All Statuses</option>
+                            <option value="Idea">Idea</option>
+                            <option value="In Design">In Design</option>
+                            <option value="Ready for Mockup">Ready for Mockup</option>
+                            <option value="Ready to Publish">Ready to Publish</option>
+                            <option value="Published">Published</option>
+                            <option value="Retired">Retired</option>
+                        </select>
+                    </label>
+                    <label class="generator-field" for="titleSearchInput">
+                        <span>Search Title</span>
+                        <input id="titleSearchInput" type="text" placeholder="Search by product title">
+                    </label>
+                    <label class="generator-field" for="sortProductsSelect">
+                        <span>Sort</span>
+                        <select id="sortProductsSelect">
+                            <option value="newest">Newest First</option>
+                            <option value="margin">Highest Margin</option>
+                            <option value="priority">Priority</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="library-export-actions">
+                    <button class="btn btn-secondary" id="exportJsonBtn" type="button">Export Product Library as JSON</button>
+                    <button class="btn btn-secondary" id="exportCsvBtn" type="button">Export Product Library as CSV</button>
+                </div>
+
+                <div class="product-grid" id="productGrid" aria-live="polite"></div>
             </div>
         </div>
     </section>
