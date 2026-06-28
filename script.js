@@ -216,6 +216,28 @@ const designQueueCollectionFilter = document.getElementById('designQueueCollecti
 const designQueuePriorityFilter = document.getElementById('designQueuePriorityFilter');
 const designApprovalGrid = document.getElementById('designApprovalGrid');
 
+// Mockup & Listing Builder localStorage key and UI references.
+const mockupListingsStorageKey = 'sunesonCommerceOsMockupListings';
+const mockupListingProductSelect = document.getElementById('mockupListingProductSelect');
+const mockupImageUrlInput = document.getElementById('mockupImageUrlInput');
+const listingProductTitleInput = document.getElementById('listingProductTitleInput');
+const listingProductDescriptionInput = document.getElementById('listingProductDescriptionInput');
+const listingSeoTitleInput = document.getElementById('listingSeoTitleInput');
+const listingSeoMetaDescriptionInput = document.getElementById('listingSeoMetaDescriptionInput');
+const listingTagsInput = document.getElementById('listingTagsInput');
+const listingPriceInput = document.getElementById('listingPriceInput');
+const listingCostInput = document.getElementById('listingCostInput');
+const listingPrintProviderInput = document.getElementById('listingPrintProviderInput');
+const listingColorsInput = document.getElementById('listingColorsInput');
+const listingSizesInput = document.getElementById('listingSizesInput');
+const generateDraftListingBtn = document.getElementById('generateDraftListingBtn');
+const saveListingBtn = document.getElementById('saveListingBtn');
+const markMockupCreatedBtn = document.getElementById('markMockupCreatedBtn');
+const markListingReadyToPublishBtn = document.getElementById('markListingReadyToPublishBtn');
+const savedListingsSummary = document.getElementById('savedListingsSummary');
+const savedListingsGrid = document.getElementById('savedListingsGrid');
+const exportListingsCsvBtn = document.getElementById('exportListingsCsvBtn');
+
 // Publishing Queue localStorage key and UI references.
 const publishingQueueStorageKey = 'sunesonCommerceOsPublishingQueue';
 const publishingQueueGrid = document.getElementById('publishingQueueGrid');
@@ -253,6 +275,7 @@ const publishingChecklistOptions = {
 
 // Temporary in-memory package that is generated before a user saves it.
 let pendingMarketingPackage = null;
+let editingListingId = null;
 
 // Product design statuses that belong in the Design Approval Queue workflow.
 const designApprovalQueueStatuses = ['Not Started', 'Prompt Written', 'AI Generated', 'Needs Revision'];
@@ -303,6 +326,21 @@ function loadMarketingPackages() {
 // Persist all marketing packages to localStorage.
 function saveMarketingPackages(packages) {
     localStorage.setItem(marketingPackagesStorageKey, JSON.stringify(packages));
+}
+
+// Load saved mockup/listing records from localStorage.
+function loadMockupListings() {
+    try {
+        const raw = localStorage.getItem(mockupListingsStorageKey);
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+// Persist mockup/listing records to localStorage.
+function saveMockupListings(listings) {
+    localStorage.setItem(mockupListingsStorageKey, JSON.stringify(listings));
 }
 
 // Generate a sequential product ID based on the highest existing product number.
@@ -1163,6 +1201,7 @@ function refreshProductLibrary() {
     const visibleProducts = sortProducts(filterProducts(allProducts));
     renderProductGrid(visibleProducts);
     refreshDesignApprovalQueue();
+    refreshMockupListingProductOptions();
 }
 
 // Keep only product records currently in design workflow states.
@@ -1293,6 +1332,366 @@ function updateProductDesignFields(productId, updates) {
     refreshProductLibrary();
 }
 
+// Restrict builder options to approved designs that are ready for mockup or publish staging.
+function getEligibleMockupListingProducts(products) {
+    return products.filter((product) => {
+        const designApproved = product.designStatus === 'Approved';
+        const eligibleStatus = product.status === 'Ready for Mockup' || product.status === 'Ready to Publish';
+        return designApproved && eligibleStatus;
+    });
+}
+
+// Reset the builder form when there is no selected product or after delete flows.
+function resetMockupListingForm() {
+    editingListingId = null;
+
+    if (mockupListingProductSelect) {
+        mockupListingProductSelect.value = '';
+    }
+
+    if (mockupImageUrlInput) {
+        mockupImageUrlInput.value = '';
+    }
+
+    if (listingProductTitleInput) {
+        listingProductTitleInput.value = '';
+    }
+
+    if (listingProductDescriptionInput) {
+        listingProductDescriptionInput.value = '';
+    }
+
+    if (listingSeoTitleInput) {
+        listingSeoTitleInput.value = '';
+    }
+
+    if (listingSeoMetaDescriptionInput) {
+        listingSeoMetaDescriptionInput.value = '';
+    }
+
+    if (listingTagsInput) {
+        listingTagsInput.value = '';
+    }
+
+    if (listingPriceInput) {
+        listingPriceInput.value = '';
+    }
+
+    if (listingCostInput) {
+        listingCostInput.value = '';
+    }
+
+    if (listingPrintProviderInput) {
+        listingPrintProviderInput.value = '';
+    }
+
+    if (listingColorsInput) {
+        listingColorsInput.value = '';
+    }
+
+    if (listingSizesInput) {
+        listingSizesInput.value = '';
+    }
+}
+
+// Populate form from selected product and any saved listing tied to that product.
+function populateMockupListingForm(productId) {
+    if (!productId) {
+        resetMockupListingForm();
+        return;
+    }
+
+    const products = loadProductLibrary();
+    const targetProduct = products.find((product) => product.id === productId);
+    const savedListing = loadMockupListings().find((listing) => listing.productId === productId);
+
+    if (!targetProduct) {
+        resetMockupListingForm();
+        return;
+    }
+
+    editingListingId = savedListing?.listingId || null;
+
+    if (mockupListingProductSelect) {
+        mockupListingProductSelect.value = productId;
+    }
+
+    if (mockupImageUrlInput) {
+        mockupImageUrlInput.value = savedListing?.mockupImageUrl || '';
+    }
+
+    if (listingProductTitleInput) {
+        listingProductTitleInput.value = savedListing?.productTitle || targetProduct.title || '';
+    }
+
+    if (listingProductDescriptionInput) {
+        listingProductDescriptionInput.value = savedListing?.productDescription || '';
+    }
+
+    if (listingSeoTitleInput) {
+        listingSeoTitleInput.value = savedListing?.seoTitle || '';
+    }
+
+    if (listingSeoMetaDescriptionInput) {
+        listingSeoMetaDescriptionInput.value = savedListing?.seoMetaDescription || '';
+    }
+
+    if (listingTagsInput) {
+        listingTagsInput.value = savedListing?.tags || '';
+    }
+
+    if (listingPriceInput) {
+        listingPriceInput.value = savedListing?.productPrice ?? targetProduct.estimatedPrice ?? '';
+    }
+
+    if (listingCostInput) {
+        listingCostInput.value = savedListing?.productCost ?? targetProduct.estimatedCost ?? '';
+    }
+
+    if (listingPrintProviderInput) {
+        listingPrintProviderInput.value = savedListing?.printProvider || '';
+    }
+
+    if (listingColorsInput) {
+        listingColorsInput.value = savedListing?.productColors || '';
+    }
+
+    if (listingSizesInput) {
+        listingSizesInput.value = savedListing?.availableSizes || '';
+    }
+}
+
+// Keep the product selector aligned with eligible Product Library records.
+function refreshMockupListingProductOptions() {
+    if (!mockupListingProductSelect) {
+        return;
+    }
+
+    const products = getEligibleMockupListingProducts(loadProductLibrary());
+    const previousValue = mockupListingProductSelect.value;
+
+    mockupListingProductSelect.innerHTML = `
+        <option value="">Select approved product</option>
+        ${products.map((product) => `<option value="${escapeHtml(product.id)}">${escapeHtml(product.id)} - ${escapeHtml(product.title)}</option>`).join('')}
+    `;
+
+    const stillExists = products.some((product) => product.id === previousValue);
+    if (stillExists) {
+        mockupListingProductSelect.value = previousValue;
+        populateMockupListingForm(previousValue);
+        return;
+    }
+
+    resetMockupListingForm();
+}
+
+// Build mock placeholder copy for listing draft generation.
+function buildDraftListingContent(product) {
+    const collection = product.collection || 'Core Collection';
+    const productType = product.productType || 'Apparel';
+    const productTitle = listingProductTitleInput?.value.trim() || product.title;
+
+    return {
+        productDescription: `${productTitle} is a premium ${productType.toLowerCase()} from the ${collection} collection, built around an approved graphic concept and designed for everyday wear, gifting, and launch-day momentum. This mock listing copy highlights comfort, visual character, and easy merchandising across storefront and social surfaces.`,
+        seoTitle: `${productTitle} | ${collection} ${productType} | Suneson Commerce`,
+        seoMetaDescription: `Shop ${productTitle} from the ${collection} collection. Premium ${productType.toLowerCase()} styling, approved artwork, and launch-ready presentation for your next drop.`,
+        tags: `${collection}, ${productType}, graphic apparel, new drop, approved design`
+    };
+}
+
+// Read current listing form values into a single object for save and status actions.
+function buildListingPayloadFromForm(product) {
+    const listingId = editingListingId || `LIST-${product.id}-${Date.now()}`;
+    const existingListing = loadMockupListings().find((listing) => listing.listingId === editingListingId);
+    const createdAt = existingListing?.createdAt || new Date().toISOString();
+    const createdDate = existingListing?.createdDate || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+    return {
+        listingId,
+        productId: product.id,
+        mockupImageUrl: mockupImageUrlInput?.value.trim() || '',
+        productTitle: listingProductTitleInput?.value.trim() || product.title,
+        productDescription: listingProductDescriptionInput?.value.trim() || '',
+        seoTitle: listingSeoTitleInput?.value.trim() || '',
+        seoMetaDescription: listingSeoMetaDescriptionInput?.value.trim() || '',
+        tags: listingTagsInput?.value.trim() || '',
+        productPrice: parseMoneyInput(listingPriceInput?.value.trim()),
+        productCost: parseMoneyInput(listingCostInput?.value.trim()),
+        printProvider: listingPrintProviderInput?.value.trim() || '',
+        productColors: listingColorsInput?.value.trim() || '',
+        availableSizes: listingSizesInput?.value.trim() || '',
+        createdAt,
+        createdDate,
+        updatedAt: new Date().toISOString(),
+        updatedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    };
+}
+
+// Save current listing form and sync key fields back to the Product Library record.
+function saveListingFromForm(showToast = true) {
+    const productId = mockupListingProductSelect?.value || '';
+    if (!productId) {
+        if (showToast) {
+            showMessage('Select an approved product first.', 'error');
+        }
+        return null;
+    }
+
+    const products = loadProductLibrary();
+    const targetProduct = products.find((product) => product.id === productId);
+    if (!targetProduct) {
+        if (showToast) {
+            showMessage('Selected product could not be found.', 'error');
+        }
+        return null;
+    }
+
+    const listingPayload = buildListingPayloadFromForm(targetProduct);
+    if (!listingPayload.productTitle) {
+        if (showToast) {
+            showMessage('Product title is required for a listing.', 'error');
+        }
+        return null;
+    }
+
+    const listings = loadMockupListings();
+    const existingIndex = listings.findIndex((listing) => listing.productId === productId || listing.listingId === listingPayload.listingId);
+    const nextListings = [...listings];
+
+    if (existingIndex >= 0) {
+        nextListings[existingIndex] = listingPayload;
+    } else {
+        nextListings.unshift(listingPayload);
+    }
+
+    saveMockupListings(nextListings);
+
+    const updatedProducts = products.map((product) => {
+        if (product.id !== productId) {
+            return product;
+        }
+
+        return {
+            ...product,
+            title: listingPayload.productTitle,
+            estimatedPrice: listingPayload.productPrice,
+            estimatedCost: listingPayload.productCost,
+            listingId: listingPayload.listingId,
+            mockupImageUrl: listingPayload.mockupImageUrl,
+            listingSeoTitle: listingPayload.seoTitle,
+            listingSeoMetaDescription: listingPayload.seoMetaDescription,
+            listingTags: listingPayload.tags,
+            printProvider: listingPayload.printProvider,
+            productColors: listingPayload.productColors,
+            availableSizes: listingPayload.availableSizes,
+            productDescription: listingPayload.productDescription
+        };
+    });
+
+    saveProductLibrary(updatedProducts);
+    editingListingId = listingPayload.listingId;
+    refreshSavedListings();
+    refreshProductLibrary();
+
+    if (showToast) {
+        showMessage(`${productId} listing saved.`, 'success');
+    }
+
+    return updatedProducts.find((product) => product.id === productId) || null;
+}
+
+// Render saved listing cards for quick review and edit access.
+function refreshSavedListings() {
+    if (!savedListingsGrid) {
+        return;
+    }
+
+    const listings = [...loadMockupListings()].sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+
+    if (savedListingsSummary) {
+        savedListingsSummary.textContent = `${listings.length} saved listings`;
+    }
+
+    if (!listings.length) {
+        savedListingsGrid.innerHTML = '<article class="product-empty-state">No saved listings yet. Select an approved product and save a listing to build this library.</article>';
+        return;
+    }
+
+    savedListingsGrid.innerHTML = listings.map((listing) => `
+        <article class="saved-listing-card" data-listing-id="${escapeHtml(listing.listingId)}">
+            <div class="product-card-top">
+                <div>
+                    <p class="product-id">${escapeHtml(listing.productId)}</p>
+                    <h3 class="product-title">${escapeHtml(listing.productTitle)}</h3>
+                </div>
+                <span class="pill status-info">Listing Saved</span>
+            </div>
+
+            ${listing.mockupImageUrl ? `<div class="saved-listing-image-wrap"><img class="saved-listing-image" src="${escapeHtml(listing.mockupImageUrl)}" alt="${escapeHtml(listing.productTitle)} mockup preview"></div>` : ''}
+
+            <div class="product-meta">
+                <p class="product-meta-item"><span class="product-meta-label">Print Provider</span><span class="product-meta-value">${escapeHtml(listing.printProvider || 'N/A')}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Price</span><span class="product-meta-value">${escapeHtml(formatCurrency(listing.productPrice))}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Cost</span><span class="product-meta-value">${escapeHtml(formatCurrency(listing.productCost))}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Colors</span><span class="product-meta-value">${escapeHtml(listing.productColors || 'N/A')}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Sizes</span><span class="product-meta-value">${escapeHtml(listing.availableSizes || 'N/A')}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Tags</span><span class="product-meta-value">${escapeHtml(listing.tags || 'N/A')}</span></p>
+                <p class="product-meta-item"><span class="product-meta-label">Updated</span><span class="product-meta-value">${escapeHtml(listing.updatedDate || listing.createdDate)}</span></p>
+            </div>
+
+            <div class="saved-listing-actions">
+                <button class="btn btn-secondary edit-listing-btn" type="button" data-listing-id="${escapeHtml(listing.listingId)}">Edit Listing</button>
+                <button class="btn btn-secondary delete-listing-btn" type="button" data-listing-id="${escapeHtml(listing.listingId)}">Delete Listing</button>
+            </div>
+        </article>
+    `).join('');
+
+    savedListingsGrid.querySelectorAll('.saved-listing-card').forEach((card) => observeAnimatedElement(card));
+}
+
+// Convert saved listings to CSV for export.
+function mockupListingsToCsv(listings) {
+    const headers = [
+        'Listing ID',
+        'Product ID',
+        'Product Title',
+        'Mockup Image URL',
+        'Product Description',
+        'SEO Title',
+        'SEO Meta Description',
+        'Tags',
+        'Product Price',
+        'Product Cost',
+        'Print Provider',
+        'Product Colors',
+        'Available Sizes',
+        'Created Date',
+        'Updated Date'
+    ];
+
+    const escapeCsv = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+
+    return [headers, ...listings.map((listing) => [
+        listing.listingId,
+        listing.productId,
+        listing.productTitle,
+        listing.mockupImageUrl,
+        listing.productDescription,
+        listing.seoTitle,
+        listing.seoMetaDescription,
+        listing.tags,
+        listing.productPrice ?? '',
+        listing.productCost ?? '',
+        listing.printProvider,
+        listing.productColors,
+        listing.availableSizes,
+        listing.createdDate,
+        listing.updatedDate || listing.createdDate
+    ])]
+        .map((row) => row.map(escapeCsv).join(','))
+        .join('\n');
+}
+
 // Create a product payload from an idea card with required default statuses.
 function createProductFromIdea(idea) {
     const existingProducts = loadProductLibrary();
@@ -1407,6 +1806,100 @@ if (designQueueCollectionFilter) {
 
 if (designQueuePriorityFilter) {
     designQueuePriorityFilter.addEventListener('change', refreshDesignApprovalQueue);
+}
+
+// Load selected product or existing listing details into the builder form.
+if (mockupListingProductSelect) {
+    mockupListingProductSelect.addEventListener('change', () => {
+        populateMockupListingForm(mockupListingProductSelect.value);
+    });
+}
+
+// Generate mock placeholder listing copy for the selected approved product.
+if (generateDraftListingBtn) {
+    generateDraftListingBtn.addEventListener('click', () => {
+        const productId = mockupListingProductSelect?.value || '';
+        const product = loadProductLibrary().find((item) => item.id === productId);
+
+        if (!product) {
+            showMessage('Select an approved product first.', 'error');
+            return;
+        }
+
+        const draft = buildDraftListingContent(product);
+
+        if (listingProductDescriptionInput) {
+            listingProductDescriptionInput.value = draft.productDescription;
+        }
+
+        if (listingSeoTitleInput) {
+            listingSeoTitleInput.value = draft.seoTitle;
+        }
+
+        if (listingSeoMetaDescriptionInput) {
+            listingSeoMetaDescriptionInput.value = draft.seoMetaDescription;
+        }
+
+        if (listingTagsInput) {
+            listingTagsInput.value = draft.tags;
+        }
+
+        if (listingProductTitleInput && !listingProductTitleInput.value.trim()) {
+            listingProductTitleInput.value = product.title;
+        }
+
+        showMessage('Draft listing copy generated.', 'success');
+    });
+}
+
+// Save listing form details and link the listing back to Product Library.
+if (saveListingBtn) {
+    saveListingBtn.addEventListener('click', () => {
+        saveListingFromForm(true);
+    });
+}
+
+// Promote selected approved product into mockup-complete stage.
+if (markMockupCreatedBtn) {
+    markMockupCreatedBtn.addEventListener('click', () => {
+        const savedProduct = saveListingFromForm(false);
+        const productId = mockupListingProductSelect?.value || '';
+
+        if (!productId && !savedProduct) {
+            showMessage('Select a product before marking mockup status.', 'error');
+            return;
+        }
+
+        updateProductDesignFields(productId || savedProduct.id, {
+            status: 'Ready to Publish'
+        });
+        showMessage(`${productId || savedProduct.id} marked as Ready to Publish.`, 'success');
+    });
+}
+
+// Sync selected product into Publishing Queue once the listing is ready to launch.
+if (markListingReadyToPublishBtn) {
+    markListingReadyToPublishBtn.addEventListener('click', () => {
+        const savedProduct = saveListingFromForm(false);
+        const productId = mockupListingProductSelect?.value || savedProduct?.id || '';
+        const product = loadProductLibrary().find((item) => item.id === productId);
+
+        if (!product) {
+            showMessage('Select a product before moving it to Publishing Queue.', 'error');
+            return;
+        }
+
+        const updatedProduct = {
+            ...product,
+            status: 'Ready to Publish'
+        };
+
+        const allProducts = loadProductLibrary().map((item) => item.id === productId ? updatedProduct : item);
+        saveProductLibrary(allProducts);
+        addToPublishingQueue(updatedProduct);
+        refreshProductLibrary();
+        showMessage(`${productId} synced into Publishing Queue.`, 'success');
+    });
 }
 
 // Convert products array to CSV content with quote-safe escaping.
@@ -1608,6 +2101,76 @@ if (designApprovalGrid) {
             });
             showMessage(`${productId} approved and moved to Ready for Mockup.`, 'success');
         }
+    });
+}
+
+// Delegate saved listing edit and delete actions.
+if (savedListingsGrid) {
+    savedListingsGrid.addEventListener('click', (event) => {
+        const editButton = event.target.closest('.edit-listing-btn');
+        if (editButton) {
+            const listingId = editButton.dataset.listingId;
+            const listing = loadMockupListings().find((item) => item.listingId === listingId);
+
+            if (!listing) {
+                showMessage('Listing not found.', 'error');
+                return;
+            }
+
+            populateMockupListingForm(listing.productId);
+            document.querySelector('#mockup-listing-builder')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            showMessage(`Editing listing for ${listing.productId}.`, 'success');
+            return;
+        }
+
+        const deleteButton = event.target.closest('.delete-listing-btn');
+        if (deleteButton) {
+            const listingId = deleteButton.dataset.listingId;
+            const listings = loadMockupListings();
+            const targetListing = listings.find((item) => item.listingId === listingId);
+            const remainingListings = listings.filter((item) => item.listingId !== listingId);
+
+            saveMockupListings(remainingListings);
+
+            if (targetListing) {
+                const updatedProducts = loadProductLibrary().map((product) => {
+                    if (product.id !== targetListing.productId) {
+                        return product;
+                    }
+
+                    const nextProduct = { ...product };
+                    delete nextProduct.listingId;
+                    delete nextProduct.mockupImageUrl;
+                    delete nextProduct.listingSeoTitle;
+                    delete nextProduct.listingSeoMetaDescription;
+                    delete nextProduct.listingTags;
+                    delete nextProduct.printProvider;
+                    delete nextProduct.productColors;
+                    delete nextProduct.availableSizes;
+                    delete nextProduct.productDescription;
+                    return nextProduct;
+                });
+
+                saveProductLibrary(updatedProducts);
+
+                if (mockupListingProductSelect?.value === targetListing.productId) {
+                    populateMockupListingForm(targetListing.productId);
+                }
+            }
+
+            refreshSavedListings();
+            refreshProductLibrary();
+            showMessage('Listing deleted.', 'success');
+        }
+    });
+}
+
+// Export saved listings as CSV.
+if (exportListingsCsvBtn) {
+    exportListingsCsvBtn.addEventListener('click', () => {
+        const listings = loadMockupListings();
+        downloadTextFile('suneson-product-listings.csv', mockupListingsToCsv(listings), 'text/csv;charset=utf-8');
+        showMessage('Listings exported as CSV.', 'success');
     });
 }
 
@@ -1919,5 +2482,6 @@ refreshPublishingQueue();
 renderMarketingPreview(null);
 refreshMarketingPackages();
 refreshDesignApprovalQueue();
+refreshSavedListings();
 
 console.log('Suneson Commerce OS internal dashboard initialized.');

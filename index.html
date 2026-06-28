@@ -15,6 +15,7 @@
                 <li><a href="#design-queue">Design</a></li>
                 <li><a href="#product-library">Library</a></li>
                 <li><a href="#design-approval-queue">Design Approval</a></li>
+                <li><a href="#mockup-listing-builder">Mockups</a></li>
                 <li><a href="#publishing-queue">Publishing Queue</a></li>
                 <li><a href="#marketing-generator">Marketing</a></li>
                 <li><a href="#launches">Launches</a></li>
@@ -441,6 +442,97 @@
                 </div>
 
                 <div class="design-approval-grid" id="designApprovalGrid" aria-live="polite"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mockup-listing-builder" id="mockup-listing-builder">
+        <div class="container">
+            <div class="mockup-listing-head">
+                <h2>Mockup &amp; Listing Builder</h2>
+                <p class="section-subtitle">Turn approved designs into ready-to-publish listings with mockup details, SEO copy, pricing inputs, and launch-ready metadata.</p>
+            </div>
+
+            <div class="mockup-listing-shell card">
+                <div class="mockup-listing-form-grid">
+                    <label class="generator-field" for="mockupListingProductSelect">
+                        <span>Approved Product</span>
+                        <select id="mockupListingProductSelect">
+                            <option value="">Select approved product</option>
+                        </select>
+                    </label>
+
+                    <label class="generator-field" for="mockupImageUrlInput">
+                        <span>Product Mockup Image URL</span>
+                        <input id="mockupImageUrlInput" type="url" placeholder="https://example.com/mockup.jpg">
+                    </label>
+
+                    <label class="generator-field" for="listingProductTitleInput">
+                        <span>Product Title</span>
+                        <input id="listingProductTitleInput" type="text" placeholder="Launch-ready product title">
+                    </label>
+
+                    <label class="generator-field mockup-listing-field-wide" for="listingProductDescriptionInput">
+                        <span>Product Description</span>
+                        <textarea id="listingProductDescriptionInput" rows="4" placeholder="Write or generate a product description"></textarea>
+                    </label>
+
+                    <label class="generator-field" for="listingSeoTitleInput">
+                        <span>SEO Title</span>
+                        <input id="listingSeoTitleInput" type="text" placeholder="SEO title">
+                    </label>
+
+                    <label class="generator-field mockup-listing-field-wide" for="listingSeoMetaDescriptionInput">
+                        <span>SEO Meta Description</span>
+                        <textarea id="listingSeoMetaDescriptionInput" rows="3" placeholder="Meta description for search results"></textarea>
+                    </label>
+
+                    <label class="generator-field" for="listingTagsInput">
+                        <span>Tags</span>
+                        <input id="listingTagsInput" type="text" placeholder="golf shirt, summer drop, graphic tee">
+                    </label>
+
+                    <label class="generator-field" for="listingPriceInput">
+                        <span>Product Price</span>
+                        <input id="listingPriceInput" type="number" min="0" step="0.01" placeholder="29.99">
+                    </label>
+
+                    <label class="generator-field" for="listingCostInput">
+                        <span>Product Cost</span>
+                        <input id="listingCostInput" type="number" min="0" step="0.01" placeholder="11.50">
+                    </label>
+
+                    <label class="generator-field" for="listingPrintProviderInput">
+                        <span>Print Provider</span>
+                        <input id="listingPrintProviderInput" type="text" placeholder="Printful, Printify, manual supplier">
+                    </label>
+
+                    <label class="generator-field" for="listingColorsInput">
+                        <span>Product Colors</span>
+                        <input id="listingColorsInput" type="text" placeholder="Black, Sand, Forest Green">
+                    </label>
+
+                    <label class="generator-field" for="listingSizesInput">
+                        <span>Available Sizes</span>
+                        <input id="listingSizesInput" type="text" placeholder="S, M, L, XL, 2XL">
+                    </label>
+                </div>
+
+                <div class="mockup-listing-actions">
+                    <button class="btn btn-secondary" id="generateDraftListingBtn" type="button">Generate Draft Listing</button>
+                    <button class="btn btn-primary" id="saveListingBtn" type="button">Save Listing</button>
+                    <button class="btn btn-secondary" id="markMockupCreatedBtn" type="button">Mark Mockup Created</button>
+                    <button class="btn btn-primary" id="markListingReadyToPublishBtn" type="button">Mark Ready to Publish</button>
+                </div>
+            </div>
+
+            <div class="saved-listings-shell card">
+                <div class="saved-listings-toolbar">
+                    <p class="saved-listings-summary" id="savedListingsSummary">0 saved listings</p>
+                    <button class="btn btn-secondary" id="exportListingsCsvBtn" type="button">Export Listings as CSV</button>
+                </div>
+
+                <div class="saved-listings-grid" id="savedListingsGrid" aria-live="polite"></div>
             </div>
         </div>
     </section>
