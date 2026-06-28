@@ -1,6 +1,6 @@
 const countUp = (element) => {
   const target = Number(element.dataset.count || 0);
-  const isCurrency = element.textContent.trim().startsWith("$");
+  const isCurrency = element.dataset.currency === "true";
   const duration = 1200;
   const start = performance.now();
 
@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (workflowSteps.length > 0) {
     let activeStep = 0;
-    const workflowInterval = window.setInterval(() => {
+    const workflowRotationInterval = window.setInterval(() => {
       workflowSteps[activeStep].classList.remove("is-active");
       activeStep = (activeStep + 1) % workflowSteps.length;
       workflowSteps[activeStep].classList.add("is-active");
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener(
       "pagehide",
       () => {
-        window.clearInterval(workflowInterval);
+        window.clearInterval(workflowRotationInterval);
       },
       { once: true }
     );

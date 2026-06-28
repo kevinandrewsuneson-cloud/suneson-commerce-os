@@ -9,6 +9,7 @@
   --blue: #2cc8ff;
   --green: #34f5c5;
   --white: #ffffff;
+  --gradient-primary: linear-gradient(135deg, var(--blue), var(--green));
   --shadow: 0 24px 80px rgba(2, 8, 18, 0.45);
   --radius: 24px;
 }
@@ -70,7 +71,7 @@ button {
   width: 2.8rem;
   height: 2.8rem;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--blue), var(--green));
+  background: var(--gradient-primary);
   color: #04111d;
   font-weight: 800;
   box-shadow: 0 10px 30px rgba(44, 200, 255, 0.35);
@@ -194,7 +195,7 @@ h2 {
 }
 
 .button--primary {
-  background: linear-gradient(135deg, var(--blue), var(--green));
+  background: var(--gradient-primary);
   color: #05101b;
   box-shadow: 0 14px 35px rgba(44, 200, 255, 0.28);
 }
