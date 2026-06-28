@@ -24,25 +24,32 @@ const countUp = (element) => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("year").textContent = new Date().getFullYear();
+  const yearElement = document.getElementById("year");
+
+  if (yearElement) {
+    yearElement.textContent = new Date().getFullYear();
+  }
 
   document.querySelectorAll("[data-count]").forEach((element) => {
     countUp(element);
   });
 
   const workflowSteps = [...document.querySelectorAll(".workflow-step")];
-  let activeStep = 0;
-  const workflowInterval = window.setInterval(() => {
-    workflowSteps[activeStep].classList.remove("is-active");
-    activeStep = (activeStep + 1) % workflowSteps.length;
-    workflowSteps[activeStep].classList.add("is-active");
-  }, 1800);
 
-  window.addEventListener(
-    "pagehide",
-    () => {
-      window.clearInterval(workflowInterval);
-    },
-    { once: true }
-  );
+  if (workflowSteps.length > 0) {
+    let activeStep = 0;
+    const workflowInterval = window.setInterval(() => {
+      workflowSteps[activeStep].classList.remove("is-active");
+      activeStep = (activeStep + 1) % workflowSteps.length;
+      workflowSteps[activeStep].classList.add("is-active");
+    }, 1800);
+
+    window.addEventListener(
+      "pagehide",
+      () => {
+        window.clearInterval(workflowInterval);
+      },
+      { once: true }
+    );
+  }
 });
