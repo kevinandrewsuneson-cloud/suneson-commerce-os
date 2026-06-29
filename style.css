@@ -727,6 +727,66 @@ h2 {
     font-size: 1.02rem;
 }
 
+.workflow-progress-block {
+    margin-bottom: 0.75rem;
+}
+
+.workflow-progress-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+}
+
+.workflow-progress-label,
+.workflow-progress-stage,
+.workflow-timeline-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.workflow-progress-stage {
+    color: var(--primary-green);
+}
+
+.workflow-progress-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(160, 174, 192, 0.16);
+    overflow: hidden;
+}
+
+.workflow-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+}
+
+.workflow-timeline {
+    display: grid;
+    gap: 0.38rem;
+    margin-bottom: 0.75rem;
+}
+
+.workflow-timeline-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding-top: 0.38rem;
+    border-top: 1px solid rgba(160, 174, 192, 0.12);
+}
+
+.workflow-timeline-value {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    text-align: right;
+}
+
 .product-meta {
     display: grid;
     gap: 0.42rem;

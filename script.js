@@ -48,7 +48,7 @@ function showMessage(message, type) {
 
 // Reveal cards and sections as they enter the viewport
 const animatedElements = document.querySelectorAll(
-    '.module-card, .card, .timeline-item, .priority-item, .detail-table, .dashboard-card, .idea-result-card, .product-card, .publishing-queue-card, .marketing-package-card, .marketing-preview-card, .design-approval-card'
+    '.module-card, .card, .timeline-item, .priority-item, .detail-table, .dashboard-card, .idea-result-card, .product-card, .publishing-queue-card, .marketing-package-card, .marketing-preview-card, .design-approval-card, .saved-listing-card'
 );
 
 const observer = new IntersectionObserver((entries) => {
@@ -287,7 +287,21 @@ let editingProductId = null;
 function loadProductLibrary() {
     try {
         const raw = localStorage.getItem(productLibraryStorageKey);
-        return raw ? JSON.parse(raw) : [];
+        const parsedProducts = raw ? JSON.parse(raw) : [];
+        const legacyQueue = JSON.parse(localStorage.getItem(publishingQueueStorageKey) || '[]');
+        const savedListings = JSON.parse(localStorage.getItem(mockupListingsStorageKey) || '[]');
+        const savedMarketingPackages = JSON.parse(localStorage.getItem(marketingPackagesStorageKey) || '[]');
+
+        const legacyQueueByProductId = new Map(legacyQueue.map((item) => [item.productId, item]));
+        const savedListingsByProductId = new Map(savedListings.map((item) => [item.productId, item]));
+        const marketingProducts = new Set(savedMarketingPackages.map((item) => item.productId));
+
+        return parsedProducts.map((product) => normalizeProductRecord(
+            product,
+            legacyQueueByProductId.get(product.id),
+            savedListingsByProductId.get(product.id),
+            marketingProducts.has(product.id)
+        ));
     } catch {
         return [];
     }
@@ -298,14 +312,138 @@ function saveProductLibrary(products) {
     localStorage.setItem(productLibraryStorageKey, JSON.stringify(products));
 }
 
+// Convert an ISO timestamp into a compact dashboard date label.
+function formatStoredDate(dateValue) {
+    if (!dateValue) {
+        return '';
+    }
+
+    const parsedDate = new Date(dateValue);
+    if (Number.isNaN(parsedDate.getTime())) {
+        return '';
+    }
+
+    return parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// Derive the current workflow stage from the shared master product record.
+function getWorkflowStage(product) {
+    if (product.status === 'Published' || product.publishStatus === 'Published') {
+        return 'Published';
+    }
+
+    if (product.status === 'Ready to Publish') {
+        return 'Ready to Publish';
+    }
+
+    if (product.status === 'Ready for Mockup') {
+        return 'Mockup';
+    }
+
+    if (product.designStatus === 'Approved') {
+        return 'Approved';
+    }
+
+    if (product.status === 'In Design' || (product.designStatus && product.designStatus !== 'Not Started')) {
+        return 'Design';
+    }
+
+    return 'Idea';
+}
+
+// Map workflow stages to a visual progress percentage.
+function getWorkflowProgressPercent(product) {
+    const workflowPercentByStage = {
+        Idea: 16,
+        Design: 34,
+        Approved: 52,
+        Mockup: 68,
+        'Ready to Publish': 84,
+        Published: 100
+    };
+
+    return workflowPercentByStage[getWorkflowStage(product)] || 0;
+}
+
+// Render a compact workflow progress indicator that can be reused across product cards.
+function renderWorkflowProgress(product) {
+    const stage = getWorkflowStage(product);
+    const percent = getWorkflowProgressPercent(product);
+
+    return `
+        <div class="workflow-progress-block" aria-label="Workflow stage ${escapeHtml(stage)} at ${percent}%">
+            <div class="workflow-progress-head">
+                <span class="workflow-progress-label">Workflow Progress</span>
+                <span class="workflow-progress-stage">${escapeHtml(stage)}</span>
+            </div>
+            <div class="workflow-progress-track"><span class="workflow-progress-fill" style="width: ${percent}%"></span></div>
+        </div>
+    `;
+}
+
+// Render the key workflow timeline dates that matter across modules.
+function renderWorkflowTimeline(product) {
+    const timelineItems = [
+        { label: 'Date Created', value: product.dateCreated || formatStoredDate(product.createdAt) || 'Not set' },
+        { label: 'Date Approved', value: product.dateApproved || 'Not set' },
+        { label: 'Date Mockup Completed', value: product.dateMockupCompleted || 'Not set' },
+        { label: 'Date Published', value: product.datePublished || 'Not set' }
+    ];
+
+    return `
+        <div class="workflow-timeline">
+            ${timelineItems.map((item) => `<p class="workflow-timeline-item"><span class="workflow-timeline-label">${escapeHtml(item.label)}</span><span class="workflow-timeline-value">${escapeHtml(item.value)}</span></p>`).join('')}
+        </div>
+    `;
+}
+
+// Normalize one raw product into the shared master record shape while absorbing legacy queue data.
+function normalizeProductRecord(product, legacyQueueItem, savedListing, hasMarketingPackage) {
+    const createdAt = product.createdAt || new Date().toISOString();
+    const approvedAt = product.approvedAt || '';
+    const mockupCompletedAt = product.mockupCompletedAt || '';
+    const publishedAt = product.publishedAt || '';
+
+    return {
+        ...product,
+        title: product.title || 'Untitled Product',
+        collection: product.collection || 'Seasonal',
+        productType: product.productType || 'T-Shirt',
+        status: product.status || 'Idea',
+        priority: product.priority || 'Medium',
+        designStatus: product.designStatus || 'Not Started',
+        designPrompt: product.designPrompt || '',
+        artworkConcept: product.artworkConcept || '',
+        revisionNotes: product.revisionNotes || '',
+        seoStatus: product.seoStatus || legacyQueueItem?.seoStatus || 'Not Started',
+        mockupStatus: product.mockupStatus || legacyQueueItem?.mockupStatus || (product.mockupImageUrl || savedListing?.mockupImageUrl ? 'Created' : 'Not Started'),
+        descriptionStatus: product.descriptionStatus || legacyQueueItem?.descriptionStatus || (product.productDescription || savedListing?.productDescription ? 'Drafted' : 'Not Started'),
+        socialPostStatus: product.socialPostStatus || legacyQueueItem?.socialPostStatus || (hasMarketingPackage ? 'Drafted' : 'Not Started'),
+        publishStatus: product.publishStatus || legacyQueueItem?.publishStatus || (product.status === 'Published' ? 'Published' : product.status === 'Ready to Publish' ? 'Ready' : 'Not Ready'),
+        launchChannel: product.launchChannel || legacyQueueItem?.launchChannel || 'Shopify',
+        mockupImageUrl: product.mockupImageUrl || savedListing?.mockupImageUrl || '',
+        productDescription: product.productDescription || savedListing?.productDescription || '',
+        listingSeoTitle: product.listingSeoTitle || savedListing?.seoTitle || '',
+        listingSeoMetaDescription: product.listingSeoMetaDescription || savedListing?.seoMetaDescription || '',
+        listingTags: product.listingTags || savedListing?.tags || '',
+        printProvider: product.printProvider || savedListing?.printProvider || '',
+        productColors: product.productColors || savedListing?.productColors || '',
+        availableSizes: product.availableSizes || savedListing?.availableSizes || '',
+        listingId: product.listingId || savedListing?.listingId || '',
+        createdAt,
+        dateCreated: product.dateCreated || formatStoredDate(createdAt),
+        approvedAt,
+        dateApproved: product.dateApproved || formatStoredDate(approvedAt),
+        mockupCompletedAt,
+        dateMockupCompleted: product.dateMockupCompleted || formatStoredDate(mockupCompletedAt),
+        publishedAt,
+        datePublished: product.datePublished || formatStoredDate(publishedAt)
+    };
+}
+
 // Load Publishing Queue records while safely handling malformed localStorage data.
 function loadPublishingQueue() {
-    try {
-        const raw = localStorage.getItem(publishingQueueStorageKey);
-        return raw ? JSON.parse(raw) : [];
-    } catch {
-        return [];
-    }
+    return loadProductLibrary().filter((product) => product.status === 'Ready to Publish');
 }
 
 // Persist queue records to localStorage.
@@ -404,6 +542,16 @@ function formatMargin(marginValue) {
     return `${marginValue.toFixed(1)}%`;
 }
 
+// Publishing Queue membership is now derived from the master product workflow state.
+function getPublishingQueueProducts(products) {
+    return products.filter((product) => product.status === 'Ready to Publish');
+}
+
+// Marketing packages are created from the same launch-ready products shown in Publishing Queue.
+function getMarketingEligibleProducts(products) {
+    return getPublishingQueueProducts(products);
+}
+
 // Determine if a queue item is fully launch-ready based on required checklist statuses.
 function isQueueItemReadyToPublish(queueItem) {
     const checklistApproved = queueItem.seoStatus === 'Approved'
@@ -414,113 +562,55 @@ function isQueueItemReadyToPublish(queueItem) {
     return checklistApproved && (queueItem.publishStatus === 'Ready' || queueItem.publishStatus === 'Published');
 }
 
-// Build an initial Publishing Queue payload by copying fields from Product Library.
-function createPublishingQueueItem(product) {
-    return {
-        queueId: `QUEUE-${product.id}`,
-        productId: product.id,
-        title: product.title,
-        collection: product.collection,
-        productType: product.productType,
-        estimatedPrice: product.estimatedPrice,
-        estimatedCost: product.estimatedCost,
-        estimatedMargin: product.estimatedMargin,
-        launchChannel: product.launchChannel || 'Shopify',
-        seoStatus: 'Not Started',
-        mockupStatus: 'Not Started',
-        descriptionStatus: 'Not Started',
-        socialPostStatus: 'Not Started',
-        publishStatus: 'Not Ready',
-        createdAt: new Date().toISOString()
-    };
-}
-
-// Add a Product Library record into Publishing Queue if it is not already queued.
+// Add a Product Library record into Publishing Queue by moving its master workflow state forward.
 function addToPublishingQueue(product) {
-    const queueItems = loadPublishingQueue();
-    const existingIndex = queueItems.findIndex((item) => item.productId === product.id);
-
-    if (existingIndex >= 0) {
-        // Keep checklist progress but refresh copied product metadata.
-        const existingItem = queueItems[existingIndex];
-        queueItems[existingIndex] = {
-            ...existingItem,
-            title: product.title,
-            collection: product.collection,
-            productType: product.productType,
-            estimatedPrice: product.estimatedPrice,
-            estimatedCost: product.estimatedCost,
-            estimatedMargin: product.estimatedMargin,
-            launchChannel: product.launchChannel || existingItem.launchChannel
-        };
-        savePublishingQueue(queueItems);
-        refreshPublishingQueue();
-        showMessage(`${product.id} already in Publishing Queue. Details refreshed.`, 'success');
-        return;
-    }
-
-    const queueItem = createPublishingQueueItem(product);
-    savePublishingQueue([queueItem, ...queueItems]);
-    refreshPublishingQueue();
+    updateProductDesignFields(product.id, {
+        status: 'Ready to Publish',
+        publishStatus: 'Ready',
+        launchChannel: product.launchChannel || 'Shopify'
+    });
     showMessage(`${product.id} moved to Publishing Queue.`, 'success');
 }
 
-// Update a single queue item's checklist status value.
+// Update one publishing checklist field on the shared product record.
 function updatePublishingQueueStatus(queueId, fieldName, value) {
-    const queueItems = loadPublishingQueue();
-    const updatedItems = queueItems.map((item) => {
-        if (item.queueId !== queueId) {
-            return item;
+    const nextUpdates = {
+        [fieldName]: value
+    };
+
+    if (fieldName === 'publishStatus') {
+        if (value === 'Published') {
+            const publishedAt = new Date().toISOString();
+            nextUpdates.status = 'Published';
+            nextUpdates.publishedAt = publishedAt;
+            nextUpdates.datePublished = formatStoredDate(publishedAt);
+        } else if (value === 'Ready') {
+            nextUpdates.status = 'Ready to Publish';
+        } else if (value === 'Not Ready') {
+            nextUpdates.status = 'Ready for Mockup';
         }
-
-        return {
-            ...item,
-            [fieldName]: value
-        };
-    });
-
-    savePublishingQueue(updatedItems);
-    refreshPublishingQueue();
-}
-
-// Mark queue item as Published and sync the linked Product Library record status.
-function markQueueItemPublished(queueId) {
-    const queueItems = loadPublishingQueue();
-    const targetItem = queueItems.find((item) => item.queueId === queueId);
-
-    if (!targetItem) {
-        showMessage('Queue item not found.', 'error');
-        return;
     }
 
-    const updatedQueue = queueItems.map((item) => {
-        if (item.queueId !== queueId) {
-            return item;
-        }
+    if (fieldName === 'mockupStatus' && (value === 'Created' || value === 'Approved')) {
+        const mockupCompletedAt = new Date().toISOString();
+        nextUpdates.mockupCompletedAt = mockupCompletedAt;
+        nextUpdates.dateMockupCompleted = formatStoredDate(mockupCompletedAt);
+    }
 
-        return {
-            ...item,
-            publishStatus: 'Published'
-        };
+    updateProductDesignFields(queueId, nextUpdates);
+}
+
+// Mark the launch-ready product as published on the master record.
+function markQueueItemPublished(queueId) {
+    const publishedAt = new Date().toISOString();
+
+    updateProductDesignFields(queueId, {
+        status: 'Published',
+        publishStatus: 'Published',
+        publishedAt,
+        datePublished: formatStoredDate(publishedAt)
     });
-
-    const products = loadProductLibrary();
-    const updatedProducts = products.map((product) => {
-        if (product.id !== targetItem.productId) {
-            return product;
-        }
-
-        return {
-            ...product,
-            status: 'Published'
-        };
-    });
-
-    savePublishingQueue(updatedQueue);
-    saveProductLibrary(updatedProducts);
-    refreshPublishingQueue();
-    refreshProductLibrary();
-    showMessage(`${targetItem.productId} marked as Published.`, 'success');
+    showMessage(`${queueId} marked as Published.`, 'success');
 }
 
 // Convert queue records to CSV for download.
@@ -545,7 +635,7 @@ function publishingQueueToCsv(queueItems) {
     const escapeCsv = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
 
     const rows = queueItems.map((item) => [
-        item.productId,
+        item.id,
         item.title,
         item.collection,
         item.productType,
@@ -599,7 +689,7 @@ function refreshPublishingQueue() {
         return;
     }
 
-    const queueItems = loadPublishingQueue();
+    const queueItems = getPublishingQueueProducts(loadProductLibrary());
     const sortedQueueItems = [...queueItems].sort((a, b) => {
         const aReady = isQueueItemReadyToPublish(a) ? 1 : 0;
         const bReady = isQueueItemReadyToPublish(b) ? 1 : 0;
@@ -628,14 +718,18 @@ function refreshPublishingQueue() {
             : '<span class="pill status-warning">Launch Prep In Progress</span>';
 
         return `
-            <article class="publishing-queue-card" data-queue-id="${escapeHtml(item.queueId)}">
+            <article class="publishing-queue-card" data-queue-id="${escapeHtml(item.id)}">
                 <div class="product-card-top">
                     <div>
-                        <p class="product-id">${escapeHtml(item.productId)}</p>
+                        <p class="product-id">${escapeHtml(item.id)}</p>
                         <h3 class="product-title">${escapeHtml(item.title)}</h3>
                     </div>
                     ${readyBadge}
                 </div>
+
+                ${renderWorkflowProgress(item)}
+
+                ${renderWorkflowTimeline(item)}
 
                 <div class="product-meta">
                     <p class="product-meta-item"><span class="product-meta-label">Collection</span><span class="product-meta-value">${escapeHtml(item.collection || 'N/A')}</span></p>
@@ -647,16 +741,16 @@ function refreshPublishingQueue() {
                 </div>
 
                 <div class="publishing-checklist-grid">
-                    ${renderQueueStatusSelect(item.queueId, 'seoStatus', item.seoStatus)}
-                    ${renderQueueStatusSelect(item.queueId, 'mockupStatus', item.mockupStatus)}
-                    ${renderQueueStatusSelect(item.queueId, 'descriptionStatus', item.descriptionStatus)}
-                    ${renderQueueStatusSelect(item.queueId, 'socialPostStatus', item.socialPostStatus)}
-                    ${renderQueueStatusSelect(item.queueId, 'publishStatus', item.publishStatus)}
+                    ${renderQueueStatusSelect(item.id, 'seoStatus', item.seoStatus)}
+                    ${renderQueueStatusSelect(item.id, 'mockupStatus', item.mockupStatus)}
+                    ${renderQueueStatusSelect(item.id, 'descriptionStatus', item.descriptionStatus)}
+                    ${renderQueueStatusSelect(item.id, 'socialPostStatus', item.socialPostStatus)}
+                    ${renderQueueStatusSelect(item.id, 'publishStatus', item.publishStatus)}
                 </div>
 
                 <div class="publishing-queue-card-actions">
-                    <button class="btn btn-primary mark-queue-published-btn" type="button" data-queue-id="${escapeHtml(item.queueId)}">Mark as Published</button>
-                    <button class="btn btn-secondary delete-queue-item-btn" type="button" data-queue-id="${escapeHtml(item.queueId)}">Delete from Queue</button>
+                    <button class="btn btn-primary mark-queue-published-btn" type="button" data-queue-id="${escapeHtml(item.id)}">Mark as Published</button>
+                    <button class="btn btn-secondary delete-queue-item-btn" type="button" data-queue-id="${escapeHtml(item.id)}">Delete from Queue</button>
                 </div>
             </article>
         `;
@@ -672,15 +766,15 @@ function refreshMarketingProductOptions() {
         return;
     }
 
-    const queueItems = loadPublishingQueue();
+    const queueItems = getMarketingEligibleProducts(loadProductLibrary());
     const previousValue = marketingQueueProductSelect.value;
 
     marketingQueueProductSelect.innerHTML = `
         <option value="">Select product from Publishing Queue</option>
-        ${queueItems.map((item) => `<option value="${escapeHtml(item.productId)}">${escapeHtml(item.productId)} - ${escapeHtml(item.title)}</option>`).join('')}
+        ${queueItems.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.id)} - ${escapeHtml(item.title)}</option>`).join('')}
     `;
 
-    const stillExists = queueItems.some((item) => item.productId === previousValue);
+    const stillExists = queueItems.some((item) => item.id === previousValue);
     if (stillExists) {
         marketingQueueProductSelect.value = previousValue;
     }
@@ -698,8 +792,8 @@ function buildMockMarketingPackage(queueItem, inputs) {
     const productType = queueItem.productType || 'Apparel';
 
     return {
-        packageId: `MKT-${queueItem.productId}-${Date.now()}`,
-        productId: queueItem.productId,
+        packageId: `MKT-${queueItem.id}-${Date.now()}`,
+        productId: queueItem.id,
         productTitle: title,
         collection,
         marketingTone: tone,
@@ -761,20 +855,9 @@ function renderMarketingPreview(marketingPackage) {
 
 // Sync queue social post status to Drafted whenever a package is saved for a product.
 function syncPublishingQueueSocialStatusToDrafted(productId) {
-    const queueItems = loadPublishingQueue();
-    const updatedQueueItems = queueItems.map((item) => {
-        if (item.productId !== productId) {
-            return item;
-        }
-
-        return {
-            ...item,
-            socialPostStatus: 'Drafted'
-        };
+    updateProductDesignFields(productId, {
+        socialPostStatus: 'Drafted'
     });
-
-    savePublishingQueue(updatedQueueItems);
-    refreshPublishingQueue();
 }
 
 // Convert saved marketing package collection to CSV format.
@@ -931,6 +1014,7 @@ function refreshMarketingPackages() {
 
     const packages = loadMarketingPackages();
     const sortedPackages = [...packages].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const productsById = new Map(loadProductLibrary().map((product) => [product.id, product]));
 
     if (marketingPackagesSummary) {
         marketingPackagesSummary.textContent = `${sortedPackages.length} saved marketing packages`;
@@ -941,12 +1025,15 @@ function refreshMarketingPackages() {
         return;
     }
 
-    marketingPackagesGrid.innerHTML = sortedPackages.map((item) => `
+    marketingPackagesGrid.innerHTML = sortedPackages.map((item) => {
+        const linkedProduct = productsById.get(item.productId);
+
+        return `
         <article class="marketing-package-card" data-package-id="${escapeHtml(item.packageId)}">
             <div class="product-card-top">
                 <div>
                     <p class="product-id">${escapeHtml(item.productId)}</p>
-                    <h3 class="product-title">${escapeHtml(item.productTitle)}</h3>
+                    <h3 class="product-title">${escapeHtml(linkedProduct?.title || item.productTitle)}</h3>
                 </div>
                 <span class="pill status-good">Saved</span>
             </div>
@@ -967,7 +1054,8 @@ function refreshMarketingPackages() {
                 <button class="btn btn-secondary delete-marketing-package-btn" type="button" data-package-id="${escapeHtml(item.packageId)}">Delete Package</button>
             </div>
         </article>
-    `).join('');
+    `;
+    }).join('');
 
     marketingPackagesGrid.querySelectorAll('.marketing-package-card').forEach((card) => observeAnimatedElement(card));
 }
@@ -1019,10 +1107,21 @@ function buildProductFromForm(existingProducts) {
         designPrompt: '',
         artworkConcept: '',
         revisionNotes: '',
+        seoStatus: 'Not Started',
+        mockupStatus: 'Not Started',
+        descriptionStatus: 'Not Started',
+        socialPostStatus: 'Not Started',
+        publishStatus: 'Not Ready',
         launchChannel: launchChannelSelect?.value || 'Manual',
         notes: productNotesInput?.value.trim() || '',
         createdAt: timestamp.toISOString(),
-        dateCreated: timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+        dateCreated: timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+        approvedAt: '',
+        dateApproved: '',
+        mockupCompletedAt: '',
+        dateMockupCompleted: '',
+        publishedAt: '',
+        datePublished: ''
     };
 }
 
@@ -1171,6 +1270,8 @@ function renderProductGrid(products) {
                 </div>
                 <span class="pill ${statusClassForProduct(product.status)}">${escapeHtml(product.status)}</span>
             </div>
+            ${renderWorkflowProgress(product)}
+            ${renderWorkflowTimeline(product)}
             <div class="product-meta">
                 <p class="product-meta-item"><span class="product-meta-label">Collection</span><span class="product-meta-value">${escapeHtml(product.collection)}</span></p>
                 <p class="product-meta-item"><span class="product-meta-label">Product Type</span><span class="product-meta-value">${escapeHtml(product.productType || 'N/A')}</span></p>
@@ -1202,6 +1303,9 @@ function refreshProductLibrary() {
     renderProductGrid(visibleProducts);
     refreshDesignApprovalQueue();
     refreshMockupListingProductOptions();
+    refreshPublishingQueue();
+    refreshSavedListings();
+    refreshMarketingPackages();
 }
 
 // Keep only product records currently in design workflow states.
@@ -1249,6 +1353,10 @@ function refreshDesignApprovalQueue() {
                 </div>
                 <span class="pill ${statusClassForProduct(product.status)}">${escapeHtml(product.status || 'In Design')}</span>
             </div>
+
+            ${renderWorkflowProgress(product)}
+
+            ${renderWorkflowTimeline(product)}
 
             <div class="product-meta">
                 <p class="product-meta-item"><span class="product-meta-label">Collection</span><span class="product-meta-value">${escapeHtml(product.collection || 'N/A')}</span></p>
@@ -1334,11 +1442,7 @@ function updateProductDesignFields(productId, updates) {
 
 // Restrict builder options to approved designs that are ready for mockup or publish staging.
 function getEligibleMockupListingProducts(products) {
-    return products.filter((product) => {
-        const designApproved = product.designStatus === 'Approved';
-        const eligibleStatus = product.status === 'Ready for Mockup' || product.status === 'Ready to Publish';
-        return designApproved && eligibleStatus;
-    });
+    return products.filter((product) => product.designStatus === 'Approved');
 }
 
 // Reset the builder form when there is no selected product or after delete flows.
@@ -1584,7 +1688,9 @@ function saveListingFromForm(showToast = true) {
             printProvider: listingPayload.printProvider,
             productColors: listingPayload.productColors,
             availableSizes: listingPayload.availableSizes,
-            productDescription: listingPayload.productDescription
+            productDescription: listingPayload.productDescription,
+            descriptionStatus: listingPayload.productDescription ? 'Drafted' : product.descriptionStatus,
+            seoStatus: listingPayload.seoTitle || listingPayload.seoMetaDescription ? 'Drafted' : product.seoStatus
         };
     });
 
@@ -1607,6 +1713,7 @@ function refreshSavedListings() {
     }
 
     const listings = [...loadMockupListings()].sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+    const productsById = new Map(loadProductLibrary().map((product) => [product.id, product]));
 
     if (savedListingsSummary) {
         savedListingsSummary.textContent = `${listings.length} saved listings`;
@@ -1617,15 +1724,22 @@ function refreshSavedListings() {
         return;
     }
 
-    savedListingsGrid.innerHTML = listings.map((listing) => `
+    savedListingsGrid.innerHTML = listings.map((listing) => {
+        const linkedProduct = productsById.get(listing.productId);
+
+        return `
         <article class="saved-listing-card" data-listing-id="${escapeHtml(listing.listingId)}">
             <div class="product-card-top">
                 <div>
                     <p class="product-id">${escapeHtml(listing.productId)}</p>
-                    <h3 class="product-title">${escapeHtml(listing.productTitle)}</h3>
+                    <h3 class="product-title">${escapeHtml(linkedProduct?.title || listing.productTitle)}</h3>
                 </div>
                 <span class="pill status-info">Listing Saved</span>
             </div>
+
+            ${linkedProduct ? renderWorkflowProgress(linkedProduct) : ''}
+
+            ${linkedProduct ? renderWorkflowTimeline(linkedProduct) : ''}
 
             ${listing.mockupImageUrl ? `<div class="saved-listing-image-wrap"><img class="saved-listing-image" src="${escapeHtml(listing.mockupImageUrl)}" alt="${escapeHtml(listing.productTitle)} mockup preview"></div>` : ''}
 
@@ -1644,7 +1758,8 @@ function refreshSavedListings() {
                 <button class="btn btn-secondary delete-listing-btn" type="button" data-listing-id="${escapeHtml(listing.listingId)}">Delete Listing</button>
             </div>
         </article>
-    `).join('');
+    `;
+    }).join('');
 
     savedListingsGrid.querySelectorAll('.saved-listing-card').forEach((card) => observeAnimatedElement(card));
 }
@@ -1712,10 +1827,21 @@ function createProductFromIdea(idea) {
         designPrompt: '',
         artworkConcept: '',
         revisionNotes: '',
+        seoStatus: 'Not Started',
+        mockupStatus: 'Not Started',
+        descriptionStatus: 'Not Started',
+        socialPostStatus: 'Not Started',
+        publishStatus: 'Not Ready',
         launchChannel: 'Manual',
         notes: idea.marketingAngle || '',
         createdAt: timestamp.toISOString(),
-        dateCreated: timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+        dateCreated: timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+        approvedAt: '',
+        dateApproved: '',
+        mockupCompletedAt: '',
+        dateMockupCompleted: '',
+        publishedAt: '',
+        datePublished: ''
     };
 
     saveProductLibrary([product, ...existingProducts]);
@@ -1864,6 +1990,7 @@ if (markMockupCreatedBtn) {
     markMockupCreatedBtn.addEventListener('click', () => {
         const savedProduct = saveListingFromForm(false);
         const productId = mockupListingProductSelect?.value || '';
+        const mockupCompletedAt = new Date().toISOString();
 
         if (!productId && !savedProduct) {
             showMessage('Select a product before marking mockup status.', 'error');
@@ -1871,7 +1998,11 @@ if (markMockupCreatedBtn) {
         }
 
         updateProductDesignFields(productId || savedProduct.id, {
-            status: 'Ready to Publish'
+            status: 'Ready to Publish',
+            mockupStatus: 'Created',
+            publishStatus: 'Ready',
+            mockupCompletedAt,
+            dateMockupCompleted: formatStoredDate(mockupCompletedAt)
         });
         showMessage(`${productId || savedProduct.id} marked as Ready to Publish.`, 'success');
     });
@@ -1889,16 +2020,7 @@ if (markListingReadyToPublishBtn) {
             return;
         }
 
-        const updatedProduct = {
-            ...product,
-            status: 'Ready to Publish'
-        };
-
-        const allProducts = loadProductLibrary().map((item) => item.id === productId ? updatedProduct : item);
-        saveProductLibrary(allProducts);
-        addToPublishingQueue(updatedProduct);
-        refreshProductLibrary();
-        showMessage(`${productId} synced into Publishing Queue.`, 'success');
+        addToPublishingQueue(product);
     });
 }
 
@@ -2017,6 +2139,7 @@ if (productGrid) {
         }
 
         if (actionButton.classList.contains('publish-product-btn')) {
+            const publishedAt = new Date().toISOString();
             const updatedProducts = products.map((product) => {
                 if (product.id !== productId) {
                     return product;
@@ -2025,7 +2148,10 @@ if (productGrid) {
                 return {
                     ...product,
                     status: 'Published',
-                    designStatus: product.designStatus === 'Approved' ? 'Approved' : product.designStatus
+                    designStatus: product.designStatus === 'Approved' ? 'Approved' : product.designStatus,
+                    publishStatus: 'Published',
+                    publishedAt,
+                    datePublished: formatStoredDate(publishedAt)
                 };
             });
 
@@ -2092,12 +2218,15 @@ if (designApprovalGrid) {
         }
 
         if (actionButton.classList.contains('approve-design-btn')) {
+            const approvedAt = new Date().toISOString();
             updateProductDesignFields(productId, {
                 designPrompt: currentValues.designPrompt,
                 artworkConcept: currentValues.artworkConcept,
                 designStatus: 'Approved',
                 revisionNotes: currentValues.revisionNotes,
-                status: 'Ready for Mockup'
+                status: 'Ready for Mockup',
+                approvedAt,
+                dateApproved: formatStoredDate(approvedAt)
             });
             showMessage(`${productId} approved and moved to Ready for Mockup.`, 'success');
         }
@@ -2291,9 +2420,14 @@ if (publishingQueueGrid) {
         const deleteButton = event.target.closest('.delete-queue-item-btn');
         if (deleteButton) {
             const queueId = deleteButton.dataset.queueId;
-            const remainingItems = loadPublishingQueue().filter((item) => item.queueId !== queueId);
-            savePublishingQueue(remainingItems);
-            refreshPublishingQueue();
+            if (!queueId) {
+                return;
+            }
+
+            updateProductDesignFields(queueId, {
+                status: 'Ready for Mockup',
+                publishStatus: 'Not Ready'
+            });
             showMessage('Queue item removed.', 'success');
             return;
         }
@@ -2313,7 +2447,20 @@ if (publishingQueueGrid) {
 // Clear all queue records.
 if (clearPublishingQueueBtn) {
     clearPublishingQueueBtn.addEventListener('click', () => {
-        savePublishingQueue([]);
+        const updatedProducts = loadProductLibrary().map((product) => {
+            if (product.status !== 'Ready to Publish') {
+                return product;
+            }
+
+            return {
+                ...product,
+                status: 'Ready for Mockup',
+                publishStatus: 'Not Ready'
+            };
+        });
+
+        saveProductLibrary(updatedProducts);
+        refreshProductLibrary();
         refreshPublishingQueue();
         showMessage('Publishing Queue cleared.', 'success');
     });
@@ -2337,7 +2484,7 @@ if (generateMarketingPackageBtn) {
             return;
         }
 
-        const queueItem = loadPublishingQueue().find((item) => item.productId === selectedProductId);
+        const queueItem = loadPublishingQueue().find((item) => item.id === selectedProductId);
         if (!queueItem) {
             showMessage('Selected queue product could not be found.', 'error');
             return;
@@ -2478,10 +2625,15 @@ if (exportMarketingPackagesCsvBtn) {
 
 // Initialize Publishing Queue from localStorage on page load.
 closeMarketingPackageModal();
+
+// Persist one normalized master product record shape up front, then drop legacy queue copies.
+saveProductLibrary(loadProductLibrary());
+localStorage.removeItem(publishingQueueStorageKey);
+
+refreshProductLibrary();
 refreshPublishingQueue();
 renderMarketingPreview(null);
 refreshMarketingPackages();
-refreshDesignApprovalQueue();
 refreshSavedListings();
 
 console.log('Suneson Commerce OS internal dashboard initialized.');
